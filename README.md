@@ -43,7 +43,7 @@ Scripts follow a **numbered sequential pipeline** to allow full reproducibility:
 - **000_LoadData.R** — imports, cleans, and prepares all datasets  
 - **000_ScrappingData.R** — optional script to reproduce the scraping workflow (not necessary to rerun)  
 - **0XX_analysis_*.R** — numbered scripts performing the full analysis pipeline  
-- **1XX_figures_*.R** — numbered scripts generating the manuscript and supplementary figures  
+- **0XX_figures_*.R** — numbered scripts generating the manuscript and supplementary figures  
 
 Some analyses are computationally heavy.  
 **Long HPC-dependent steps are commented out**, and corresponding processed `.rds` files are provided so users can run the workflow without recomputing large objects.
