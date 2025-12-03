@@ -28,9 +28,9 @@ The repository includes both raw and processed datasets:
 - Formats: **CSV** and **RDS**
 
 All datasets used here are open-access but **require proper citation**:
-- **IUCN Red List 2024**
-- **FishBase**
-- **FishMorph**
+- **IUCN (2024). The IUCN Red List of Threatened Species. Version 2024-1. https://www.iucnredlist.org**
+- **Froese, R. & Pauly, D. (eds.) (2024). FishBase. World Wide Web electronic publication. www.fishbase.org Accessible at: https://www.fishbase.org**
+- **Brosse, S., Charpin N., Su G., Toussaint A., Herrera-R G. A., Tedesco P. A., & Villéger S. (2021). FISHMORPH: A global database on morphological traits of freshwater fishes. Global Ecology and Biogeography, 30, 2330–2336. https://doi.org/10.1111/geb.13395**
 
 ---
 
