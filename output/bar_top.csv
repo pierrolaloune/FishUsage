@@ -1,0 +1,77 @@
+"","Threshold","Use","IUCN_category","n","prop"
+"1","Top 25%","Fisheries","Data Deficient",41,0.0829959514170041
+"2","Top 25%","Fisheries","Non Threatened",358,0.724696356275304
+"3","Top 25%","Fisheries","Endangered",95,0.192307692307692
+"4","Top 25%","Aquaculture","Data Deficient",9,0.0604026845637584
+"5","Top 25%","Aquaculture","Non Threatened",96,0.644295302013423
+"6","Top 25%","Aquaculture","Endangered",44,0.295302013422819
+"7","Top 25%","Aquarium","Data Deficient",16,0.0483383685800604
+"8","Top 25%","Aquarium","Non Threatened",278,0.83987915407855
+"9","Top 25%","Aquarium","Endangered",37,0.11178247734139
+"10","Top 25%","Game fish","Data Deficient",13,0.0577777777777778
+"11","Top 25%","Game fish","Non Threatened",156,0.693333333333333
+"12","Top 25%","Game fish","Endangered",56,0.248888888888889
+"13","Top 25%","All uses","Data Deficient",48,0.0677009873060649
+"14","Top 25%","All uses","Non Threatened",534,0.753173483779972
+"15","Top 25%","All uses","Endangered",127,0.179125528913963
+"16","Top 25%","Non use","Data Deficient",283,0.185088293001962
+"17","Top 25%","Non use","Non Threatened",1010,0.66056245912361
+"18","Top 25%","Non use","Endangered",236,0.154349247874428
+"19","Top 25%",NA,"Data Deficient",1,0.0588235294117647
+"20","Top 25%",NA,"Non Threatened",16,0.941176470588235
+"21","Top 10%","Fisheries","Data Deficient",17,0.0994152046783626
+"22","Top 10%","Fisheries","Non Threatened",109,0.637426900584795
+"23","Top 10%","Fisheries","Endangered",45,0.263157894736842
+"24","Top 10%","Aquaculture","Data Deficient",5,0.0847457627118644
+"25","Top 10%","Aquaculture","Non Threatened",30,0.508474576271186
+"26","Top 10%","Aquaculture","Endangered",24,0.406779661016949
+"27","Top 10%","Aquarium","Data Deficient",9,0.0909090909090909
+"28","Top 10%","Aquarium","Non Threatened",81,0.818181818181818
+"29","Top 10%","Aquarium","Endangered",9,0.0909090909090909
+"30","Top 10%","Game fish","Data Deficient",5,0.0666666666666667
+"31","Top 10%","Game fish","Non Threatened",49,0.653333333333333
+"32","Top 10%","Game fish","Endangered",21,0.28
+"33","Top 10%","All uses","Data Deficient",21,0.0893617021276596
+"34","Top 10%","All uses","Non Threatened",160,0.680851063829787
+"35","Top 10%","All uses","Endangered",54,0.229787234042553
+"36","Top 10%","Non use","Data Deficient",117,0.177272727272727
+"37","Top 10%","Non use","Non Threatened",444,0.672727272727273
+"38","Top 10%","Non use","Endangered",99,0.15
+"39","Top 10%",NA,"Non Threatened",3,1
+"40","Top 5%","Fisheries","Data Deficient",8,0.0792079207920792
+"41","Top 5%","Fisheries","Non Threatened",56,0.554455445544555
+"42","Top 5%","Fisheries","Endangered",37,0.366336633663366
+"43","Top 5%","Aquaculture","Data Deficient",3,0.0769230769230769
+"44","Top 5%","Aquaculture","Non Threatened",16,0.41025641025641
+"45","Top 5%","Aquaculture","Endangered",20,0.512820512820513
+"46","Top 5%","Aquarium","Data Deficient",5,0.108695652173913
+"47","Top 5%","Aquarium","Non Threatened",36,0.782608695652174
+"48","Top 5%","Aquarium","Endangered",5,0.108695652173913
+"49","Top 5%","Game fish","Data Deficient",2,0.0476190476190476
+"50","Top 5%","Game fish","Non Threatened",25,0.595238095238095
+"51","Top 5%","Game fish","Endangered",15,0.357142857142857
+"52","Top 5%","All uses","Data Deficient",11,0.083969465648855
+"53","Top 5%","All uses","Non Threatened",78,0.595419847328244
+"54","Top 5%","All uses","Endangered",42,0.320610687022901
+"55","Top 5%","Non use","Data Deficient",61,0.193037974683544
+"56","Top 5%","Non use","Non Threatened",207,0.655063291139241
+"57","Top 5%","Non use","Endangered",48,0.151898734177215
+"58","Top 5%",NA,"Non Threatened",3,1
+"59","Top 1%","Fisheries","Data Deficient",2,0.0512820512820513
+"60","Top 1%","Fisheries","Non Threatened",18,0.461538461538462
+"61","Top 1%","Fisheries","Endangered",19,0.487179487179487
+"62","Top 1%","Aquaculture","Data Deficient",1,0.0625
+"63","Top 1%","Aquaculture","Non Threatened",3,0.1875
+"64","Top 1%","Aquaculture","Endangered",12,0.75
+"65","Top 1%","Aquarium","Non Threatened",7,0.7
+"66","Top 1%","Aquarium","Endangered",3,0.3
+"67","Top 1%","Game fish","Data Deficient",1,0.0666666666666667
+"68","Top 1%","Game fish","Non Threatened",9,0.6
+"69","Top 1%","Game fish","Endangered",5,0.333333333333333
+"70","Top 1%","All uses","Data Deficient",2,0.0408163265306122
+"71","Top 1%","All uses","Non Threatened",25,0.510204081632653
+"72","Top 1%","All uses","Endangered",22,0.448979591836735
+"73","Top 1%","Non use","Data Deficient",7,0.175
+"74","Top 1%","Non use","Non Threatened",29,0.725
+"75","Top 1%","Non use","Endangered",4,0.1
+"76","Top 1%",NA,"Non Threatened",2,1
