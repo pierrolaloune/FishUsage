@@ -57,7 +57,7 @@ This includes:
 - `000_LoadData.R` — data import, cleaning, and preparation  
 - `000_ScrappingData.R` — optional script to reproduce the scraping workflow  
 - `0XX_analysis_*.R` — sequential analysis scripts  
-- `0XX_figures_*.R` — scripts generating manuscript and supplementary figures  
+- `0XX_fig_*.R` — scripts generating manuscript and supplementary figures  
 
 Scripts are numbered to ensure full reproducibility when run in order.
 
