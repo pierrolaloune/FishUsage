@@ -104,5 +104,4 @@ No additional outputs are included in the repository.
 
 ### R version
 
-This project was developed using:
-
+This project was developed using: R 4.3.2
