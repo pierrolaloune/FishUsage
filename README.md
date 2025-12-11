@@ -10,7 +10,7 @@ CNRS, Université de Toulouse
 
 This repository contains all data and R scripts necessary to reproduce the analyses presented in the manuscript *Targeting morphologically unique fishes amplifies the risk of functional erosion* (paper not yet published).
 
-The project evaluates whether human uses of freshwater fishes — including food, ornamental trade, and recreational activities — are concentrated on narrow portions of the global fish functional spectrum. We test the expectation that humans select a non-random subset of species, and that morphologically unique species, often already threatened, are disproportionately targeted, increasing risks of functional erosion.
+The project evaluates whether human uses of freshwater fishes - including food, ornamental trade, and recreational activities - are concentrated on narrow portions of the global fish functional spectrum. We test the expectation that humans select a non-random subset of species, and that morphologically unique species, often already threatened, are disproportionately targeted, increasing risks of functional erosion.
 
 The repository covers all freshwater fish species globally, integrating phylogeny, functional morphology, human use information, and conservation status (IUCN 2024 assessments).
 
@@ -101,7 +101,6 @@ No additional outputs are included in the repository.
 
 ---
 
-## Requirements
 
 ### R version
 
