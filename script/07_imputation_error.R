@@ -29,7 +29,7 @@ phylogeny <- readRDS("dataOriginal/FishMORPH_Phylogeny.rds")
 # IMPUTATION ERROR SETTINGS
 ################################################################################
 
-nboot_val   <- 30     # number of bootstrap iterations
+nboot_val   <- 100     # number of bootstrap iterations
 perc_val    <- 0.1    # proportion of species masked each iteration
 npcoa_val   <- 2      # number of phylogenetic PCoA axes
 seed_val    <- 123
