@@ -1,13 +1,22 @@
-# ============================================================
-# Script: 07_imputation_error.R
-# Purpose: Evaluate imputation error using phylogeny-informed
-#          missForest and bootstrap simulations (NRMSE)
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 07_imputation_error
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
+# This script loads raw (missing) and imputed trait tables, the PCA/use object,
+# scaling parameters, and a phylogeny. It then evaluates phylogeny-informed
+# missForest imputation error using bootstrap masking simulations, summarizing
+# NRMSE across iterations and saving/loading the resulting output object.
+
+# ------------------------------------------------------------------------------
+# Data import
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
 traitsData <- read.table("dataPrepared/Fish/TraitFishMissing.txt") %>%
   dplyr::select(-IUCN)
 
@@ -25,9 +34,9 @@ sdInputed   <- attr(pca_trait$traits_scaled, "scaled:scale")
 
 phylogeny <- readRDS("dataOriginal/FishMORPH_Phylogeny.rds")
 
-################################################################################
-# IMPUTATION ERROR SETTINGS
-################################################################################
+# ------------------------------------------------------------------------------
+# Imputation error settings
+# ------------------------------------------------------------------------------
 
 nboot_val   <- 100     # number of bootstrap iterations
 perc_val    <- 0.1    # proportion of species masked each iteration
@@ -37,9 +46,9 @@ ref_max_val <- 1000   # maximum complete species used as reference
 ntree_val   <- 30
 maxiter_val <- 2
 
-################################################################################
-# RUN IMPUTATION ERROR MODEL
-################################################################################
+# ------------------------------------------------------------------------------
+# Run imputation error model
+# ------------------------------------------------------------------------------
 
 cat("\n=== STARTING PHYLOGENETIC IMPUTATION ERROR ===\n")
 set.seed(seed_val)
@@ -67,5 +76,10 @@ res <- evaluate_imputation_phylo(
 cat("\n=== ANALYSIS COMPLETE ===\n")
 print(res$summary)
 
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
+
 # saveRDS(res, "output/NRMSE_results.rds")
 NMRSE_results <- readRDS("output/NRMSE_results.rds")
+NMRSE_summary <- NMRSE_results$summary

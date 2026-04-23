@@ -1,21 +1,31 @@
-# ============================================================
-# Script: 05_Distinctiveness_IUCN.R
-# Purpose: Compute functional uniqueness (Ui) and distinctiveness,
-#          assess their relationship, and link values to species
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 05_Distinctiveness_IUCN
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
+# This script loads fish TPDs and the PCA/use object, builds a community matrix
+# (uses × species), and computes functional uniqueness (Ui) and functional
+# distinctiveness from Euclidean trait-space distances. It then merges uniqueness
+# and distinctiveness at the species level, visualizes their relationship, runs a
+# Pearson correlation test, and provides save lines for downstream reuse.
+
+# ------------------------------------------------------------------------------
+# Data import
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
 tpd_trait      <- readRDS("output/TPDs_fish.rds")
 pca_trait      <- readRDS("output/pca_trait.rds")
 species_scores <- as.data.frame(pca_trait$traits_scores[, 1:4])
 species_uses   <- as.data.frame(pca_trait$uses)
 
-################################################################################
-# COMMUNITY MATRIX (USES × SPECIES)
-################################################################################
+# ------------------------------------------------------------------------------
+# Community matrix (uses × species)
+# ------------------------------------------------------------------------------
 
 species_uses$rownames   <- rownames(species_uses)
 species_scores$rownames <- rownames(species_scores)
@@ -37,18 +47,18 @@ MatriceFish <- rbind(MatriceFish, MatriceFish_1)
 
 # write.csv(MatriceFish, "dataPrepared/MatriceFish.csv", row.names = TRUE)
 
-################################################################################
-# UNIQUENESS CALCULATION
-################################################################################
+# ------------------------------------------------------------------------------
+# Uniqueness calculation
+# ------------------------------------------------------------------------------
 
 species_scores_mat <- as.matrix(pca_trait$traits_scores[, 1:4])
 dist_matrix <- as.matrix(dist(species_scores_mat, method = "euclidean"))
 
 uni <- funrar::uniqueness(MatriceFish, dist_matrix)
 
-################################################################################
-# DISTINCTIVENESS CALCULATION
-################################################################################
+# ------------------------------------------------------------------------------
+# Distinctiveness calculation
+# ------------------------------------------------------------------------------
 
 dist_res <- funrar::distinctiveness(
   MatriceFish["all", , drop = FALSE],
@@ -63,9 +73,9 @@ dist_df <- data.frame(
   Dist    = dist_vec
 )
 
-################################################################################
-# MERGE UNIQUENESS + DISTINCTIVENESS
-################################################################################
+# ------------------------------------------------------------------------------
+# Merge uniqueness + distinctiveness
+# ------------------------------------------------------------------------------
 
 df_uni_dist <- data.frame(
   species         = uni$species,
@@ -74,9 +84,9 @@ df_uni_dist <- data.frame(
 ) %>%
   dplyr::filter(!is.na(Ui) & !is.na(Distinctiveness))
 
-################################################################################
-# PLOT: UNIQUENESS VS DISTINCTIVENESS
-################################################################################
+# ------------------------------------------------------------------------------
+# Plot: uniqueness vs distinctiveness
+# ------------------------------------------------------------------------------
 
 plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) + # Figure S2
   ggplot2::geom_point(alpha = 0.5, size = 2) +
@@ -90,18 +100,18 @@ plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) +
 
 # ggsave("figures/plot_ui_dist.jpg", plot_ui_dist, width = 10, height = 7, dpi = 300)
 
-################################################################################
-# CORRELATION TEST
-################################################################################
+# ------------------------------------------------------------------------------
+# Correlation test
+# ------------------------------------------------------------------------------
 
 cor_test <- cor.test(df_uni_dist$Ui, df_uni_dist$Distinctiveness, method = "pearson")
 
 r_value <- cor_test$estimate
 p_value <- cor_test$p.value
 
-################################################################################
-# SAVE OBJECTS
-################################################################################
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
 
 # saveRDS(uni, "dataPrepared/Fish/uni.rds")
 # saveRDS(dist_df, "dataPrepared/Fish/dist.rds")

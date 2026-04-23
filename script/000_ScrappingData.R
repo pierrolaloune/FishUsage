@@ -1,21 +1,31 @@
-# ============================================================
-# Script: 000_ScrappingData.R
-# Purpose: Scrape human use information from FishBase
-#          and generate binary use variables per species
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 000_ScrappingData
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
+# This script loads a reference species list, scrapes human-use information from
+# FishBase (optionally in parallel with progress reporting), classifies each
+# record into standardized use categories, and converts these categories into
+# final binary use variables per species. The resulting binary table can be saved
+# for downstream analyses.
+
+# ------------------------------------------------------------------------------
+# Setup
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
 uni <- data.table::fread("dataPrepared/Fish/uni.csv")
 data.table::setnames(uni, old = colnames(uni)[8], new = "Non_uses")
 
 species_names <- uni$Species
 
-################################################################################
-# SCRAPING FROM FISHBASE (PARALLEL + PROGRESS)
-################################################################################
+# ------------------------------------------------------------------------------
+# Scraping from FishBase (parallel + progress)
+# ------------------------------------------------------------------------------
 
 # recommended not run it, it's long
 # Build FishBase URLs for each species
@@ -41,9 +51,9 @@ species_names <- uni$Species
 
 results_raw <- readRDS("output/results_raw.rds")
 
-################################################################################
-# CLASSIFICATION OF USE TYPES
-################################################################################
+# ------------------------------------------------------------------------------
+# Classification of use types
+# ------------------------------------------------------------------------------
 
 results_classified <- results_raw %>%
   dplyr::bind_cols(
@@ -58,11 +68,11 @@ results_classified_selected <- results_classified %>%
 results_classified_selected <- readRDS("output/fish_human_uses_classified_parallel_progress.rds")
 
 # Example check:
-# results_classified %>% dplyr::filter(species_name == "Abramis brama") %>% as.data.frame()
+results_classified_selected %>% dplyr::filter(species_name == "Abramis brama") %>% as.data.frame()
 
-################################################################################
-# FINAL BINARY VARIABLES
-################################################################################
+# ------------------------------------------------------------------------------
+# Final binary variables
+# ------------------------------------------------------------------------------
 
 results_binary <- results_classified_selected %>%
   dplyr::mutate(dplyr::across(
@@ -77,5 +87,9 @@ results_binary <- results_classified_selected %>%
   dplyr::rowwise() %>%
   dplyr::mutate(all_use = if_else(sum(dplyr::c_across(-species_name)) > 0, 1L, 0L)) %>%
   dplyr::ungroup()
+
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
 
 # saveRDS(results_binary, "output/fish_human_uses_binary_FB.rds")

@@ -1,12 +1,22 @@
-# ============================================================
-# Script: 06_Shift_FS.R
-# Purpose: Quantify functional space shifts after removing
-#          threatened species, using 2D TPD and usage categories
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 06_Shift_FS
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA PREPARATION
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
+
+# This script loads the PCA/use object, flips PC1 for readability, estimates
+# kernel bandwidths for 2D trait-space smoothing, and computes a 2D TPD across
+# species (optionally, long computation). It then loads precomputed 2D TPD and
+# cleaned species/IUCN data, iterates over human-use categories to plot functional
+# space shifts after removing threatened species, and finally generates a shared
+# diverging colorbar legend for the shift maps.
+
+# ------------------------------------------------------------------------------
+# Data preparation
+# ------------------------------------------------------------------------------
 
 pca_trait <- readRDS("output/pca_trait.rds")
 
@@ -18,15 +28,17 @@ sd_traits <- sqrt(diag(
   ks::Hpi.diag(pca_trait$traits_scores[, c(1, 2)])
 ))
 
-################################################################################
-# 2D TPD CALCULATION (LONG)
-################################################################################
+# ------------------------------------------------------------------------------
+# 2D TPD calculation (long)
+# ------------------------------------------------------------------------------
 
 TPD_2D <- TPDsMean( # long recommended skip
   species = rownames(pca_trait$traits_scores),
   means   = pca_trait$traits_scores[, c(1, 2)],
-  sds     = matrix(rep(sd_traits, nrow(pca_trait$traits_scores)),
-                   byrow = TRUE, ncol = 2),
+  sds     = matrix(
+    rep(sd_traits, nrow(pca_trait$traits_scores)),
+    byrow = TRUE, ncol = 2
+  ),
   covar        = FALSE,
   alpha        = 0.95,
   samples      = NULL,
@@ -37,36 +49,36 @@ TPD_2D <- TPDsMean( # long recommended skip
 
 # saveRDS(TPD_2D, "output/TPD_2D.rds")
 
-################################################################################
-# LOAD OBJECTS
-################################################################################
+# ------------------------------------------------------------------------------
+# Load objects
+# ------------------------------------------------------------------------------
 
 TPDs_fish <- readRDS("output/TPD_2D.rds")
-uni_clean  <- readRDS("output/uni_clean.rds")
+uni_clean <- readRDS("output/uni_clean.rds")
 
 IUCN <- uni_clean %>%
   dplyr::select(species, IUCN)
 
-################################################################################
-# PLOT PARAMETERS
-################################################################################
+# ------------------------------------------------------------------------------
+# Plot parameters
+# ------------------------------------------------------------------------------
 
 limX   <- c(-7, 7)
 limY   <- c(-7, 7)
 usages <- c("Fisheries", "Aquaculture", "Aquarium",
             "Game fish", "Bait", "All uses")
 
-################################################################################
-# FS SHIFT PLOTS (PER USE)
-################################################################################
+# ------------------------------------------------------------------------------
+# FS shift plots (per use)
+# ------------------------------------------------------------------------------
 
 for (u in usages) {
   plot_functional_shift_by_usage(usage_name = u)
 }
 
-################################################################################
-# LEGEND (COLORBAR)
-################################################################################
+# ------------------------------------------------------------------------------
+# Legend (colorbar)
+# ------------------------------------------------------------------------------
 
 Min    <- -0.3
 Max    <- 0.3
@@ -91,11 +103,11 @@ jpeg("figures/FS_shift_legend.jpg", width = 500, height = 1600, res = 300)
 par(mar = c(4, 5, 2, 2))
 
 fields::image.plot(
-  zlim        = c(Min, Max),
-  legend.only = TRUE,
-  col         = rampcols,
-  breaks      = rampbreaks,
-  horizontal  = FALSE,
+  zlim         = c(Min, Max),
+  legend.only  = TRUE,
+  col          = rampcols,
+  breaks       = rampbreaks,
+  horizontal   = FALSE,
   legend.width = 1.2,
   legend.mar   = 4,
   axis.args    = list(
@@ -105,3 +117,9 @@ fields::image.plot(
 )
 
 dev.off()
+
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
+
+# saveRDS(TPD_2D, "output/TPD_2D.rds")

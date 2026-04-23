@@ -1,19 +1,28 @@
-# ============================================================
-# Script: 02_FSpaces_Usages.R
-# Purpose: Build functional spaces (FS) for the full fish dataset
-#          and for each human use category using PCA + funspace
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 02_FSpaces_Usages
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
+# This script loads the PCA object and fish TPDs, then builds global functional
+# spaces (FS) for two PCA subspaces (PC1–PC2 and PC3–PC4) using funspace. It then
+# repeats the same funspace computation for each human use category, storing all
+# outputs in a named list that can be saved for downstream analyses.
+
+# ------------------------------------------------------------------------------
+# Data import
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
 pca_trait <- readRDS("output/pca_trait.rds")
 tpd_trait <- readRDS("output/TPDs_fish.rds")
 
-################################################################################
-# GLOBAL FUNCTIONAL SPACES (FULL COMMUNITY)
-################################################################################
+# ------------------------------------------------------------------------------
+# Global functional spaces (full community)
+# ------------------------------------------------------------------------------
 
 # Flip PC1 for interpretability
 pca_trait$pca_object$scores[, 1]    <- -pca_trait$pca_object$scores[, 1]
@@ -37,11 +46,11 @@ FS_global_PC3PC4 <- funspace(
 )
 summary(FS_global_PC3PC4)
 
-################################################################################
-# FUNCTIONAL SPACES BY HUMAN USE CATEGORY
-################################################################################
+# ------------------------------------------------------------------------------
+# Functional spaces by human use category
+# ------------------------------------------------------------------------------
 
-usage_cols <- c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "Bait", "All uses")
+usage_cols <- c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "All uses")
 
 pc_combinations <- list(
   PC1PC2 = c(1, 2),
@@ -69,6 +78,10 @@ for (use in usage_cols) {
     funspace_results[[result_name]] <- res
   }
 }
+
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
 
 # saveRDS(funspace_results, "output/funspace_results.rds")
 # saveRDS(funspace_results, "output/funspace_results_compressed.rds", compress = "xz")

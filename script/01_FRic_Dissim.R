@@ -1,25 +1,35 @@
-# ============================================================
-# Script: 01_Fric_Dissim.R
-# Purpose: Compute functional richness (FRic), null models,
-#          standardized effect sizes (SES), and TPD-based
-#          dissimilarity among human uses
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 01_Fric_Dissim
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
+# This script loads fish TPDs, PCA outputs, and the community-by-use matrix, then
+# computes community TPDc objects and functional richness (FRic). It evaluates FRic
+# against a null model to derive standardized effect sizes (SES) and produces SES
+# histograms. Finally, it computes TPD-based dissimilarity among human uses and
+# generates a heatmap of shared probability (P_shared) across use categories.
+
+# ------------------------------------------------------------------------------
+# Data import
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
 tpd_trait   <- readRDS("output/TPDs_fish.rds")
-pca_trait   <- readRDS("output/PCA_fish.rds")
+pca_trait   <- readRDS("output/pca_trait.rds")
+
 MatriceFish <- read.csv("output/MatriceFish.csv")
 
 colnames(MatriceFish)[-1] <- gsub("\\.", " ", colnames(MatriceFish)[-1])
 rownames(MatriceFish)     <- MatriceFish$X
 MatriceFish$X             <- NULL
 
-################################################################################
-# COMMUNITY TPD AND FRIC
-################################################################################
+# ------------------------------------------------------------------------------
+# Community TPD and FRic
+# ------------------------------------------------------------------------------
 
 TPDc_Fish <- TPDc_large(TPDs = tpd_trait, sampUnit = MatriceFish)
 FRich_Fish <- Calc_FRich(TPDc = TPDc_Fish)
@@ -27,12 +37,12 @@ FRich_Fish <- Calc_FRich(TPDc = TPDc_Fish)
 # saveRDS(TPDc_Fish, "output/TPDc_Fish.rds")
 # saveRDS(FRich_Fish, "output/FRich_Fish.rds")
 
-TPDc_Fish   <- readRDS("output/TPDc_Fish.rds")
-FRich_Fish  <- readRDS("output/FRich_Fish.rds")
+TPDc_Fish  <- readRDS("output/TPDc_Fish.rds")
+FRich_Fish <- readRDS("output/FRich_Fish.rds")
 
-################################################################################
-# NULL MODEL FOR FRIC
-################################################################################
+# ------------------------------------------------------------------------------
+# Null model for FRic
+# ------------------------------------------------------------------------------
 
 FRic_null_results <- simulate_FRic_null( # long recommended skip
   n_iter          = 999,
@@ -44,9 +54,9 @@ FRic_null_results <- simulate_FRic_null( # long recommended skip
 # saveRDS(FRic_null_results, "output/FRic_null_results.rds")
 FRic_null_results <- readRDS("output/FRic_null_results.rds")
 
-################################################################################
-# SES CALCULATION
-################################################################################
+# ------------------------------------------------------------------------------
+# SES calculation
+# ------------------------------------------------------------------------------
 
 obs_df <- data.frame(
   Use   = names(FRich_Fish),
@@ -60,20 +70,20 @@ FRic_null_SES <- get_SES(obs_df = obs_df, sim_df = FRic_null_results) # Table S1
 # saveRDS(FRic_null_SES, "output/FRic_null_SES.rds")
 # write.csv(FRic_null_SES, "output/FRic_null_SES.csv", row.names = FALSE)
 
-################################################################################
-# SES PLOTS
-################################################################################
+# ------------------------------------------------------------------------------
+# SES plots
+# ------------------------------------------------------------------------------
 
-plot_SES <- plot_SES_histograms( 
+plot_SES <- plot_SES_histograms(
   sim_df = FRic_null_results,
   obs_df = obs_df
 )
 
 # ggsave("figures/Histogram_FRic_SES.png", plot_SES, width = 10, height = 6, dpi = 300)
 
-################################################################################
-# DISSIMILARITY AMONG USES
-################################################################################
+# ------------------------------------------------------------------------------
+# Dissimilarity among uses
+# ------------------------------------------------------------------------------
 
 dissimilarity_result <- dissim_large(TPDc_Fish)
 # saveRDS(dissimilarity_result, "output/dissimilarity_result.rds")

@@ -1,29 +1,42 @@
-# ============================================================
-# Script: 03_PCA_mean_trait_value.R
-# Purpose: Null model for PCA mean trait values per human use,
-#          SES computation and visualization (PCA distributions
-#          and PCA loadings)
-# ============================================================
+# ------------------------------------------------------------------------------
+# Script : 03_PCA_mean_trait_value
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
 
-################################################################################
-# DATA IMPORT
-################################################################################
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
 
-tpd_trait   <- readRDS("output/TPDs_fish.rds")
-pca_trait   <- readRDS("output/PCA_fish.rds")
+# This script loads fish TPDs, PCA outputs, and the community-by-use matrix, then
+# runs a null model to simulate mean PCA scores per human-use community. It
+# computes SES for observed mean PCA values against simulated distributions and
+# prepares long-format data for visualization. It produces (i) histograms of
+# simulated PCA distributions with observed values overlaid, (ii) a heatmap of
+# signed trait loadings across PCA axes, and (iii) a PCA correlation circle for
+# PC1–PC2 based on loadings and explained variance.
+
+# ------------------------------------------------------------------------------
+# Data import
+# ------------------------------------------------------------------------------
+
+# ---- Inputs ----
+tpd_trait     <- readRDS("output/TPDs_fish.rds")
+pca_trait     <- readRDS("output/PCA_fish.rds")
+pca_trait_use <- readRDS("output/pca_trait.rds")
+
 MatriceFish <- read.csv("output/MatriceFish.csv")
 
 colnames(MatriceFish)[-1] <- gsub("\\.", " ", colnames(MatriceFish)[-1])
 rownames(MatriceFish)     <- MatriceFish$X
 MatriceFish$X             <- NULL
 
-################################################################################
-# NULL MODEL OF PCA MEAN TRAIT VALUE
-################################################################################
+# ------------------------------------------------------------------------------
+# Null model of PCA mean trait value
+# ------------------------------------------------------------------------------
 
 resultats_null <- generate_null_means( # long recommended skip
-  pca_trait     = pca_trait,
-  MatriceFish   = MatriceFish,
+  pca_trait      = pca_trait,
+  MatriceFish    = MatriceFish,
   nb_simulations = 999
 )
 
@@ -32,9 +45,9 @@ resultats_null$all <- NULL
 # saveRDS(resultats_null, "output/PCA_mean_trait_values_results.rds")
 PCA_mean_trait_values_results <- readRDS("output/PCA_mean_trait_values_results.rds")
 
-################################################################################
-# SES COMPUTATION
-################################################################################
+# ------------------------------------------------------------------------------
+# SES computation
+# ------------------------------------------------------------------------------
 
 PCA_mean_trait_values_SES <- get_SES_from_PCA_results( # Table S3
   results_list = PCA_mean_trait_values_results
@@ -42,9 +55,9 @@ PCA_mean_trait_values_SES <- get_SES_from_PCA_results( # Table S3
 
 # saveRDS(PCA_mean_trait_values_SES, "output/PCA_mean_trait_values_SES.rds")
 
-################################################################################
-# BUILD LONG FORMAT FOR PLOTTING
-################################################################################
+# ------------------------------------------------------------------------------
+# Build long format for plotting
+# ------------------------------------------------------------------------------
 
 df_plot <- purrr::map_dfr(names(PCA_mean_trait_values_results), function(usage) { 
   
@@ -73,9 +86,9 @@ df_plot$Usage <- factor(
   levels = c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "Bait", "All uses")
 )
 
-################################################################################
-# PLOT: SIMULATED PCA DISTRIBUTIONS
-################################################################################
+# ------------------------------------------------------------------------------
+# Plot: simulated PCA distributions
+# ------------------------------------------------------------------------------
 
 p <- ggplot2::ggplot(df_plot, aes(x = Simulated_value)) +
   ggplot2::geom_histogram(bins = 50, fill = "#69b3a2", color = "black") +
@@ -92,17 +105,17 @@ p <- ggplot2::ggplot(df_plot, aes(x = Simulated_value)) +
   ) +
   ggplot2::theme_minimal(base_size = 12) +
   ggplot2::theme(
-    strip.text      = element_text(face = "bold"),
-    plot.title      = element_text(face = "bold", hjust = 0.5),
-    plot.subtitle   = element_text(hjust = 0.5)
+    strip.text    = element_text(face = "bold"),
+    plot.title    = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
   )
 
 print(p)
 # ggsave("plot/PCA_mean_trait_values_plot.png", p, width = 6, height = 10, dpi = 300)
 
-################################################################################
-# PCA LOADING STRUCTURE
-################################################################################
+# ------------------------------------------------------------------------------
+# PCA loading structure
+# ------------------------------------------------------------------------------
 
 loadings_mat <- as.matrix(
   pca_trait$pca_object$loadings[, paste0("Comp.", 1:4)]
@@ -142,62 +155,19 @@ plot_trait_contrib <- ggplot2::ggplot(
   ) +
   ggplot2::theme_minimal(base_size = 12) +
   ggplot2::theme(
-    panel.grid = element_blank(),
+    panel.grid  = element_blank(),
     axis.text.y = element_text(face = "bold"),
-    plot.title = element_text(hjust = 0.5, face = "bold")
+    plot.title  = element_text(hjust = 0.5, face = "bold")
   )
 
 print(plot_trait_contrib)
 # ggsave("plot/plot_trait_contrib.png", plot_trait_contrib, width = 5, height = 5, dpi = 300)
 
-################################################################################
-# PCA CORRELATION CIRCLE (PC1–PC2)
-################################################################################
+# ------------------------------------------------------------------------------
+# Save
+# ------------------------------------------------------------------------------
 
-sdev <- pca_trait$pca_object$sdev
-var_explained <- sdev^2 / sum(sdev^2)
-
-percent_PC1 <- round(var_explained[1] * 100, 1)
-percent_PC2 <- round(var_explained[2] * 100, 1)
-
-x_lab <- paste0("PC1 (", percent_PC1, "%)")
-y_lab <- paste0("PC2 (", percent_PC2, "%)")
-
-loadings_df <- as.data.frame(
-  pca_trait$pca_object$loadings[, c("Comp.1", "Comp.2")]
-)
-loadings_df$Trait <- rownames(loadings_df)
-
-circle_df <- data.frame(
-  x = cos(seq(0, 2 * pi, length.out = 100)),
-  y = sin(seq(0, 2 * pi, length.out = 100))
-)
-
-cercle_PCA <- ggplot2::ggplot() +
-  ggplot2::geom_path(data = circle_df, aes(x = x, y = y), color = "grey70") +
-  ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey80") +
-  ggplot2::geom_vline(xintercept = 0, linetype = "dashed", color = "grey80") +
-  ggplot2::geom_segment(
-    data = loadings_df,
-    aes(x = 0, y = 0, xend = Comp.1, yend = Comp.2),
-    arrow = arrow(length = unit(0.1, "cm")),
-    color = "darkred",
-    linewidth = 0.3
-  ) +
-  ggrepel::geom_text_repel(
-    data = loadings_df,
-    aes(x = Comp.1, y = Comp.2, label = Trait),
-    color = "black", size = 3.5, max.overlaps = Inf
-  ) +
-  ggplot2::coord_fixed() +
-  ggplot2::xlim(c(-1.1, 1.1)) +
-  ggplot2::ylim(c(-1.1, 1.1)) +
-  ggplot2::labs(
-    title = "Correlation circle (PCA)",
-    x = x_lab,
-    y = y_lab
-  ) +
-  ggplot2::theme_minimal()
-
-print(cercle_PCA)
-# ggsave("plot/cercle_PCA.png", cercle_PCA, width = 5, height = 5, dpi = 300)
+# saveRDS(PCA_mean_trait_values_results, "output/PCA_mean_trait_values_results.rds")
+# saveRDS(PCA_mean_trait_values_SES, "output/PCA_mean_trait_values_SES.rds")
+# ggsave("plot/PCA_mean_trait_values_plot.png", p, width = 6, height = 10, dpi = 300)
+# ggsave("plot/plot_trait_contrib.png", plot_trait_contrib, width = 5, height = 5, dpi = 300)

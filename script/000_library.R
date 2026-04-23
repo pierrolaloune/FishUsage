@@ -1,9 +1,10 @@
-# ============================================================
+# ------------------------------------------------------------------------------
 # Script: 000_library.R
-# Purpose: Install (if needed) and load all required packages
-# ============================================================
+# ------------------------------------------------------------------------------
 
-# --- PACKAGES ------------------------------------------------
+# ------------------------------------------------------------------------------
+# PACKAGES
+# ------------------------------------------------------------------------------
 
 required_packages <- unique(c(
   "ade4", "ape", "berryFunctions", "betapart", "biscale", "cowplot",
@@ -16,7 +17,9 @@ required_packages <- unique(c(
   "wesanderson", "rvest", "xml2", "stringr", "purrr", "glue",
   "furrr", "future", "progressr", "funspace", "forcats", "ggeffects",
   "patchwork", "performance", "scico", "fields", "rfishbase",
-  "pbapply", "ggrepel", "AICcmodavg", "lme4", "DHARMa", "missRanger"
+  "pbapply", "ggrepel", "AICcmodavg", "lme4", "DHARMa", "missRanger",
+  "paletteer", "naniar", "mice", "VIM", "visdat", "broom", "knitr", "mgcv",
+  "emayili"
 ))
 
 # Install missing packages
@@ -28,3 +31,4 @@ if (length(missing_packages) > 0L) {
 
 # Load all required packages
 invisible(lapply(required_packages, library, character.only = TRUE))
+
