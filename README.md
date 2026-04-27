@@ -1,7 +1,7 @@
 # FishUsage
 
 ### Data and code to reproduce the analyses from  
-**“Targeting morphologically unique fishes amplifies the risk of functional erosion”**  
+**“Human targeting of morphologically unique fishes amplifies the risk of functional erosion”**  
 *Pierre Bouchet, Sébastien Brosse & Aurèle Toussaint*  
 CNRS, Université de Toulouse
 
