@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Script : 09_Fig_Null_Model_IUCN
+# Script : 09_fig3_sim_ext
 # Author : P. Bouchet
 # ------------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ FRich_Fish  <- readRDS("output/FRich_Fish.rds")
 FRic_global <- FRich_Fish["all"]
 
 Fric_obs <- Fric_obs %>%
-  mutate(res = 100 + 100 * (FRic_obs - FRich_Fish[Usage]) / FRic_global)
+  mutate(res = 100 + 100 * ((FRic_obs - FRich_Fish[Usage]) / FRic_global))
 
 Fric_sim <- Fric_sim %>%
   mutate(res = 100 + 100 * (res - FRich_Fish[Usage]) / FRic_global)
@@ -199,7 +199,7 @@ for (u in unique_usages) {
     )
   
   ggsave(
-    filename = glue::glue("C:/Users/pierr/OneDrive/Documents/GitHub/fishUsages/figures/FRic_{gsub(' ', '_', u)}.jpeg"),
+    filename = glue::glue("figures/FRic_{gsub(' ', '_', u)}.jpeg"),
     plot     = fig_u,
     width    = 6,
     height   = 5,
