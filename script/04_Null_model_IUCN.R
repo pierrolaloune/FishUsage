@@ -67,7 +67,7 @@ res_FRic_threat <- readRDS("output/res_FRic_threat.rds")
 # SES computation
 # ------------------------------------------------------------------------------
 
-res_SES <- calc_SES_table(res_FRic_threat) # Table S1 b
+res_SES <- calc_SES_table(res_FRic_threat) # Table S2 (raw values)
 
 # ------------------------------------------------------------------------------
 # Save
