@@ -113,5 +113,5 @@ p_value <- cor_test$p.value
 # Save
 # ------------------------------------------------------------------------------
 
-# saveRDS(uni, "dataPrepared/Fish/uni.rds")
-# saveRDS(dist_df, "dataPrepared/Fish/dist.rds")
+# saveRDS(uni, "output/uni_clean.rds")
+# saveRDS(dist_df, "output/dist_clean.rds")
