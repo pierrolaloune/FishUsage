@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Script: Functional deficit maps in morphospace (TPD-based occupancy deficit)
+# Script: 10_figS1
 # Authors: P. Bouchet, A. Toussaint
 # ------------------------------------------------------------------------------
 
