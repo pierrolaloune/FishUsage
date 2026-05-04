@@ -44,12 +44,12 @@ FRich_Fish <- readRDS("output/FRich_Fish.rds")
 # Null model for FRic
 # ------------------------------------------------------------------------------
 
-FRic_null_results <- simulate_FRic_null( # long recommended skip
-  n_iter          = 999,
-  original_matrix = MatriceFish,
-  TPDs_object     = tpd_trait
-) %>%
-  dplyr::filter(Usage != "all")
+# FRic_null_results <- simulate_FRic_null( # long recommended skip
+#   n_iter          = 999,
+#   original_matrix = MatriceFish,
+#   TPDs_object     = tpd_trait
+# ) %>%
+#   dplyr::filter(Usage != "all")
 
 # saveRDS(FRic_null_results, "output/FRic_null_results.rds")
 FRic_null_results <- readRDS("output/FRic_null_results.rds")
@@ -87,7 +87,6 @@ plot_SES <- plot_SES_histograms(
 
 dissimilarity_result <- dissim_large(TPDc_Fish)
 # saveRDS(dissimilarity_result, "output/dissimilarity_result.rds")
-dissimilarity_result <- readRDS("output/dissimilarity_result.rds")
 
 dissim_df_shared <- as.data.frame(as.table(
   as.matrix(dissimilarity_result$communities$P_shared)
