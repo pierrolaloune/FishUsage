@@ -1,15 +1,7 @@
 # ------------------------------------------------------------------------------
-# Multiple imputation sensitivity analysis
-# 100 independent missForest runs — parallelized (variables)
-# PCA recomputed at each imputation + Procrustes all pairs
-# Response to Reviewer 3, Comment 1
+# 12_Single_vs_MI
+# P. Bouchet
 # ------------------------------------------------------------------------------
-
-library(missForest)
-library(vegan)
-library(doParallel)
-library(dplyr)
-library(tidyr)
 
 # ------------------------------------------------------------------------------
 # Data import + preparation
