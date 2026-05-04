@@ -1021,8 +1021,9 @@ compute_empirical_pvalues <- function(observed_df, null_df) {
     ungroup()
 }
 
+
 # ------------------------------------------------------------------------------
-# GLM MODELS (THREATENED STATUS ~ TRAIT / USE)
+# GAM MODELS (THREATENED STATUS ~ TRAIT / USE)
 # ------------------------------------------------------------------------------
 
 prepare_menaced_data_var <- function(data) {
@@ -1175,6 +1176,90 @@ run_global_glm_var <- function(data, var_name = "Ui") {
     summary     = broom::tidy(model, conf.int = TRUE),
     performance = performance::model_performance(model),
     effect_plot = ggpredict(model, terms = var_name)
+  )
+}
+
+format_pval <- function(p, digits = 3, threshold = 0.001) {
+  # p can be 0 in mgcv summaries -> display as p < threshold
+  if (is.na(p)) return("p = NA")
+  if (p == 0 || p < threshold) return(paste0("p < ", format(threshold, scientific = FALSE)))
+  paste0("p = ", formatC(p, format = "f", digits = digits))
+}
+
+extract_gam_label <- function(gam_fit) {
+  s <- summary(gam_fit)
+  
+  dev <- s$dev.expl
+  p_smooth <- s$s.table[1, "p-value"]  # single smooth: s(Dist)
+  
+  paste0(
+    "dev. expl. = ", sprintf("%.1f", 100 * dev), "%; ",
+    format_pval(p_smooth)
+  )
+}
+
+label_y_by_use <- function(usage_name) {
+  if (usage_name == "All uses") return(0.80)   # top
+  if (usage_name == "Fisheries") return(0.15)  # bottom
+  return(0.83)                                 # unchanged for others
+}
+
+theme_no_axis_titles <- function() {
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank()
+  )
+}
+
+format_pval <- function(p, digits = 3, threshold = 0.001) {
+  # mgcv can return p = 0 in summary tables; display nicely
+  if (is.na(p)) return(NA_character_)
+  if (p == 0 || p < threshold) return(paste0("<", format(threshold, scientific = FALSE)))
+  formatC(p, format = "f", digits = digits)
+}
+
+make_species_level_all_uses <- function(data) {
+  data %>%
+    group_by(Species) %>%
+    summarise(
+      Dist = first(Dist),
+      Used = as.numeric(any(Use != "Non use" & Use_presence == 1)),
+      .groups = "drop"
+    )
+}
+
+make_species_level_by_usage <- function(data, usage_name) {
+  data %>%
+    filter(Use == usage_name) %>%
+    group_by(Species) %>%
+    summarise(
+      Dist = first(Dist),
+      Used = as.numeric(any(Use_presence == 1)),
+      .groups = "drop"
+    )
+}
+
+fit_gam_extract <- function(df_species, usage_name, k = 8) {
+  gam_fit <- mgcv::gam(
+    Used ~ s(Dist, k = k),
+    data   = df_species,
+    family = binomial(link = "logit"),
+    method = "REML"
+  )
+  
+  s <- summary(gam_fit)
+  
+  edf   <- unname(s$s.table[1, "edf"])
+  chisq <- unname(s$s.table[1, "Chi.sq"])
+  pval  <- unname(s$s.table[1, "p-value"])
+  dev   <- unname(s$dev.expl)
+  
+  tibble(
+    Usage    = usage_name,
+    edf      = edf,
+    Chi.sq   = chisq,
+    p_value  = format_pval(pval),
+    dev_expl = 100 * dev
   )
 }
 
