@@ -88,7 +88,7 @@ df_uni_dist <- data.frame(
 # Plot: uniqueness vs distinctiveness
 # ------------------------------------------------------------------------------
 
-plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) + # Figure S2
+plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) + # Figure S5
   ggplot2::geom_point(alpha = 0.5, size = 2) +
   ggplot2::geom_smooth(method = "lm", color = "orange", se = TRUE) +
   ggplot2::labs(
