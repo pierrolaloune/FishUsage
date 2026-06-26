@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Script: 10_fig2
+# Script: 10_fig2_figS1
 # Authors: P. Bouchet, A. Toussaint
 # ------------------------------------------------------------------------------
 
@@ -319,6 +319,187 @@ plot_panel_deficit <- function(out_pdf = "figures/Figure_FunctionalShifts_clean.
 
 # ---- Individual plots (square, high resolution) ----
 plot_individual_deficit <- function(out_dir = "figures/individual_panels",
+                                    limX = c(-5, 5),
+                                    limY = c(-7, 7),
+                                    ncol = 1000,
+                                    png_px = 4000,
+                                    png_res = 600) {
+  
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+  
+  for (catg in usages_order) {
+    # PNG (square, high resolution)
+    png(
+      filename = file.path(out_dir, paste0("Deficit_", gsub(" ", "_", catg), ".png")),
+      width = png_px, height = png_px, res = png_res, type = "cairo"
+    )
+    on.exit(dev.off(), add = TRUE)
+    par(mar = c(5.2, 5.2, 2.5, 0.8))
+    plot_one_panel_deficit(catg = catg, limX = limX, limY = limY, ncol = ncol)
+    dev.off()
+    
+    # PDF (square)
+    pdf(
+      file = file.path(out_dir, paste0("Deficit_", gsub(" ", "_", catg), ".pdf")),
+      width = 7, height = 7, pointsize = 14
+    )
+    on.exit(dev.off(), add = TRUE)
+    par(mar = c(5.2, 5.2, 2.5, 0.8))
+    plot_one_panel_deficit(catg = catg, limX = limX, limY = limY, ncol = ncol)
+    dev.off()
+  }
+  
+  invisible(out_dir)
+}
+
+# ------------------------------------------------------------------------------
+# Run
+# ------------------------------------------------------------------------------
+
+# 1) Multi-panel PDF
+plot_panel_deficit()
+
+# 2) Individual square high-resolution exports (PNG + PDF)
+plot_individual_deficit()
+
+# ------------------------------------------------------------------------------
+# Plot Fig S1 PC3 PC4
+# ------------------------------------------------------------------------------
+
+# ---- One panel ----
+plot_one_panel_deficit <- function(catg,
+                                   limX = c(-5, 5),
+                                   limY = c(-7, 7),
+                                   support_level = 0.99,
+                                   contour_level = 0.99,
+                                   ncol = 1000) {
+  
+  # Fixed axis labels provided by you
+  xlab_pc <- "PC 3 (17%)"
+  ylab_pc <- "PC 4 (13.2%)"
+  
+  imageMatALL_core <- core_099[, , "ALL"]
+  
+  # Build deficit from occupancy counts: (N_ALL - N_Usage) / N_ALL
+  n_all <- counts[["ALL"]]
+  n_use <- counts[[catg]]
+  
+  deficit_vec <- 1-((n_all - n_use) / n_all)
+  deficit_vec[!is.finite(deficit_vec)] <- NA_real_  # handles division by 0
+  deficit_vec[deficit_vec < 0] <- 0
+  deficit_vec[deficit_vec > 1] <- 1
+  deficit_mat <- vec_to_mat(deficit_vec, eval_grid)
+  
+  # Mask outside global 99% core
+  deficit_mat[is.na(imageMatALL_core)] <- NA_real_
+  
+  # Palette
+  ColorRamp <- rev(paletteer::paletteer_c("grDevices::Lajolla", ncol))
+  
+  # 1) Base layer (remove default Comp.1/Comp.2 labels explicitly)
+  image(
+    x = Comp.3Vec, y = Comp.4Vec, z = imageMatALL_core,
+    xlim = limX, ylim = limY,
+    col = ColorRamp,
+    xaxs = "r", yaxs = "r", axes = FALSE, asp = 1,
+    xlab = "", ylab = ""
+  )
+  
+  # 2) Black polygon of global support
+  cont_support <- contourLines(
+    x = Comp.3Vec, y = Comp.4Vec, z = core_full[, , "ALL"],
+    levels = support_level
+  )
+  for (fig in seq_along(cont_support)) {
+    polygon(x = cont_support[[fig]]$x, y = cont_support[[fig]]$y, col = 1, border = NA)
+  }
+  
+  # 3) Deficit overlay (again, suppress default labels)
+  image(
+    x = Comp.3Vec, y = Comp.4Vec, z = deficit_mat,
+    xlim = limX, ylim = limY,
+    col = ColorRamp,
+    add = TRUE,
+    xlab = "", ylab = ""
+  )
+  
+  # 4) Global outline (solid black line)
+  cont_outline <- contourLines(
+    x = Comp.3Vec, y = Comp.4Vec, z = core_full[, , "ALL"],
+    levels = contour_level
+  )
+  for (cont in cont_outline) {
+    lines(cont$x, cont$y, lwd = 1.5, lty = 1, col = "black")
+  }
+  
+  # 5) Axes + titles (PC labels only once, no overlap)
+  box(which = "plot")
+  axis(1, tcl = 0.3, lwd = 0.8, cex.axis = 1.1)
+  axis(2, las = 1, tcl = 0.3, lwd = 0.8, cex.axis = 1.1)
+  
+  mtext(xlab_pc, side = 1, line = 2.2, cex = 1.0)
+  mtext(ylab_pc, side = 2, line = 2.6, cex = 1.0)
+  
+  title(main = catg, cex.main = 1.2)
+  
+  invisible(ColorRamp)
+}
+
+# ---- Multi-panel figure + legend ----
+plot_panel_deficit <- function(out_pdf = "figures/Figure_FunctionalShifts_clean_PC34.pdf",
+                               width = 25, height = 5, pointsize = 20,
+                               limX = c(-5, 5),
+                               limY = c(-7, 7),
+                               ncol = 1000) {
+  
+  dir.create(dirname(out_pdf), showWarnings = FALSE, recursive = TRUE)
+  
+  pdf(out_pdf, width = width, height = height, pointsize = pointsize)
+  on.exit(dev.off(), add = TRUE)
+  
+  layout(
+    matrix(c(1, 2, 3, 4, 5, 6), nrow = 1, byrow = TRUE),
+    widths = c(0.3, 0.3, 0.3, 0.3, 0.3, 0.1)
+  )
+  
+  par(mar = c(5.2, 5.2, 2.5, 0.5))
+  
+  # Draw panels
+  for (catg in usages_order) {
+    ColorRamp <- plot_one_panel_deficit(
+      catg = catg,
+      limX = limX,
+      limY = limY,
+      support_level = 0.99,
+      contour_level = 0.99,
+      ncol = ncol
+    )
+  }
+  
+  # Legend with tick marks at 0/25/50/75/100%
+  par(mar = c(5.2, 0.8, 2.5, 0.8))
+  legend_image <- as.raster(matrix(ColorRamp, ncol = 1))
+  plot(c(0, 2), c(0, 1), type = "n", axes = FALSE, xlab = "", ylab = "")
+  
+  # Color bar
+  rasterImage(legend_image, xleft = 0, ybottom = 0, xright = 1, ytop = 1)
+  
+  # Tick positions and labels
+  y_ticks <- c(1, 0.75, 0.5, 0.25, 0)
+  lab_ticks <- paste0(c(100, 75, 50, 25, 0), "%")
+  
+  # Draw ticks (small segments) + labels
+  segments(x0 = 1.00, x1 = 1.10, y0 = y_ticks, y1 = y_ticks, lwd = 1.2)
+  graphics::text(x = 1.55, y = y_ticks, labels = lab_ticks, cex = 1)
+  
+  # Frame around legend
+  rect(xleft = 0, ybottom = 0, xright = 1, ytop = 1, border = "black", lwd = 1)
+  
+  invisible(out_pdf)
+}
+
+# ---- Individual plots (square, high resolution) ----
+plot_individual_deficit <- function(out_dir = "figures/individual_panels_34",
                                     limX = c(-5, 5),
                                     limY = c(-7, 7),
                                     ncol = 1000,
