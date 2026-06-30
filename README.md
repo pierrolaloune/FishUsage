@@ -117,7 +117,3 @@ Typical installation time on a standard desktop computer is a few minutes.
 Typical runtime ranges from minutes to several hours depending on whether computationally intensive steps are re-run.
 
 ---
-
-## License
-
-This code is released under the **MIT License**.
