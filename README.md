@@ -1,6 +1,6 @@
 # Human Targeting of Morphologically Unique Fishes
 
-[![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21848877.svg)](https://doi.org/10.5281/zenodo.21848877)
+[![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21848876.svg)](https://doi.org/10.5281/zenodo.21848876)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
 This repository contains the code, data, figures, and result tables supporting the article:
@@ -64,7 +64,7 @@ and `output/`.
 
 The datasets and all precomputed results are included in this repository, under
 `dataOriginal/`, `dataPrepared/` and `output/`. They are also archived on Zenodo
-together with the code: [10.5281/zenodo.21848877](https://doi.org/10.5281/zenodo.21848877).
+together with the code: [10.5281/zenodo.21848876](https://doi.org/10.5281/zenodo.21848876).
 
 Original sources:
 
@@ -123,7 +123,7 @@ If you use this code or these data, please cite the article and the code archive
 
 > Bouchet, P., Brosse, S., & Toussaint, A. Human targeting of morphologically unique fishes amplifies the risk of functional erosion. *Nature Communications*. https://doi.org/\<ARTICLE-DOI\>
 
-- **Code and data:** [10.5281/zenodo.21848877](https://doi.org/10.5281/zenodo.21848877)
+- **Code and data:** [10.5281/zenodo.21848876](https://doi.org/10.5281/zenodo.21848876)
 
 ---
 
