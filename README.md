@@ -1,15 +1,8 @@
-# Human Targeting of Morphologically Unique Fishes
+# FishUsage
 
 [![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21848876.svg)](https://doi.org/10.5281/zenodo.21848876)
-[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
-This repository contains the code, data, figures, and result tables supporting the article:
-
-**Title:** *Human targeting of morphologically unique fishes amplifies the risk of functional erosion*
-**Journal:** *Nature Communications*
-**Authors:** Pierre Bouchet<sup>1</sup>\*, Sébastien Brosse<sup>1</sup>, Aurèle Toussaint<sup>1</sup>
-**Affiliation:** <sup>1</sup> Centre de Recherche sur la Biodiversité et l'Environnement (CRBE), Université de Toulouse, Toulouse INP, CNRS, IRD, 118 route de Narbonne, 31062 Toulouse, France
-**Correspondence:** \*Pierre Bouchet, pierre.bouchet@utoulouse.fr
+Data, scripts and workflows for a study of human uses of freshwater fishes.
 
 The analysis covers **8,970 freshwater fish species** and five categories of human
 use (fisheries, aquaculture, aquarium trade, recreational fishing, bait). It asks
@@ -35,7 +28,7 @@ FishUsage/
 │   ├── 13_*.R, 100_*.R               # Sensitivity to the trait imputation
 │   ├── plot_pca_correlation_circle.R # Alternative correlation circles
 │   ├── web scrapping percentage.R    # What the scraping added over rfishbase
-│   └── test_new_funspace.R           # Exploratory, not used in the article
+│   └── test_new_funspace.R           # Exploratory, not part of the final analysis
 │
 ├── dataOriginal/             # Source datasets, as downloaded
 │                             #   FISHMORPH traits and phylogeny, IUCN Red List
@@ -46,11 +39,10 @@ FishUsage/
 ├── output/                   # Precomputed results reloaded by the scripts (~150 MB)
 │
 ├── figures/                  # Main and supplementary figures
-│   ├── Clean/                # Publication versions
+│   ├── Clean/                # Final versions
 │   └── individual_panels/    # One square panel per use
 │
 ├── README.md                 # This file
-├── LICENSE                   # MIT for the code, plus the terms of the source datasets
 └── .gitignore
 ```
 
@@ -73,6 +65,10 @@ Original sources:
 | Morphological traits and phylogeny | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. *Global Ecol. Biogeogr.* **30**, 2330–2336 (2021). |
 | Length, weight, human uses | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages. |
 | Conservation status | IUCN. The IUCN Red List of Threatened Species. (2025). |
+
+The datasets redistributed under `dataOriginal/` remain subject to the terms of
+their respective providers. Please consult those terms before reusing or
+redistributing them.
 
 ---
 
@@ -119,23 +115,11 @@ Figures are written to `figures/`, result tables to `output/`.
 
 ## How to cite
 
-If you use this code or these data, please cite the article and the code archive:
+If you use this code or these data, please cite the archive:
 
-> Bouchet, P., Brosse, S., & Toussaint, A. Human targeting of morphologically unique fishes amplifies the risk of functional erosion. *Nature Communications*. https://doi.org/\<ARTICLE-DOI\>
-
-- **Code and data:** [10.5281/zenodo.21848876](https://doi.org/10.5281/zenodo.21848876)
+> Bouchet, P. pierrolaloune/FishUsage. Zenodo. https://doi.org/10.5281/zenodo.21848876
 
 ---
-
-## License
-
-The code in `script/`, and the results derived from it, are released under the
-[MIT License](https://opensource.org/licenses/MIT). See [`LICENSE`](LICENSE).
-
-The datasets redistributed under `dataOriginal/` are not covered by that licence.
-They remain subject to the terms of FISHMORPH, FishBase and the IUCN Red List,
-listed in [`LICENSE`](LICENSE) and cited under
-[Data availability](#data-availability).
 
 ## Contact
 
