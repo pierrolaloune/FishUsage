@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Script : 01_FRic_Dissim
+# Script : 01_Fric_Dissim
 # Author : P. Bouchet
 # ------------------------------------------------------------------------------
 
@@ -12,11 +12,6 @@
 # against a null model to derive standardized effect sizes (SES) and produces SES
 # histograms. Finally, it computes TPD-based dissimilarity among human uses and
 # generates a heatmap of shared probability (P_shared) across use categories.
-#
-# Outputs: Table S1a (SES), Table 1 (P_shared).
-#
-# The three heavy steps are commented out; their results are stored in output/
-# and reloaded immediately afterwards, so the script runs end to end as it is.
 
 # ------------------------------------------------------------------------------
 # Data import
@@ -28,43 +23,35 @@ pca_trait   <- readRDS("output/pca_trait.rds")
 
 MatriceFish <- read.csv("output/MatriceFish.csv")
 
-# ---- Restore the species names and the row names lost by read.csv ----
 colnames(MatriceFish)[-1] <- gsub("\\.", " ", colnames(MatriceFish)[-1])
 rownames(MatriceFish)     <- MatriceFish$X
 MatriceFish$X             <- NULL
 
 # ------------------------------------------------------------------------------
-# Community TPD and FRic  [LONG]
+# Community TPD and FRic
 # ------------------------------------------------------------------------------
 
-# LONG: aggregates the TPDs of ~10,000 species into one density per human use.
+TPDc_Fish <- TPDc_large(TPDs = tpd_trait, sampUnit = MatriceFish)
+FRich_Fish <- Calc_FRich(TPDc = TPDc_Fish)
 
-# TPDc_Fish  <- TPDc_large(TPDs = tpd_trait, sampUnit = MatriceFish)
-# FRich_Fish <- Calc_FRich(TPDc = TPDc_Fish)
-#
-# saveRDS(TPDc_Fish,  "output/TPDc_Fish.rds")
+# saveRDS(TPDc_Fish, "output/TPDc_Fish.rds")
 # saveRDS(FRich_Fish, "output/FRich_Fish.rds")
 
-# ---- Recommended: load the saved objects ----
 TPDc_Fish  <- readRDS("output/TPDc_Fish.rds")
 FRich_Fish <- readRDS("output/FRich_Fish.rds")
 
 # ------------------------------------------------------------------------------
-# Null model for FRic  [LONG]
+# Null model for FRic
 # ------------------------------------------------------------------------------
 
-# LONG: 999 randomizations, each one rebuilding every community TPD.
-
-# FRic_null_results <- simulate_FRic_null(
+# FRic_null_results <- simulate_FRic_null( # long recommended skip
 #   n_iter          = 999,
 #   original_matrix = MatriceFish,
 #   TPDs_object     = tpd_trait
 # ) %>%
 #   dplyr::filter(Usage != "all")
-#
-# saveRDS(FRic_null_results, "output/FRic_null_results.rds")
 
-# ---- Recommended: load the saved result ----
+# saveRDS(FRic_null_results, "output/FRic_null_results.rds")
 FRic_null_results <- readRDS("output/FRic_null_results.rds")
 
 # ------------------------------------------------------------------------------
@@ -78,8 +65,7 @@ obs_df <- data.frame(
 ) %>%
   dplyr::filter(Use != "all")
 
-# ---- Table S1a ----
-FRic_null_SES <- get_SES(obs_df = obs_df, sim_df = FRic_null_results)
+FRic_null_SES <- get_SES(obs_df = obs_df, sim_df = FRic_null_results) # Table S1a
 
 # saveRDS(FRic_null_SES, "output/FRic_null_SES.rds")
 # write.csv(FRic_null_SES, "output/FRic_null_SES.csv", row.names = FALSE)
@@ -96,23 +82,17 @@ plot_SES <- plot_SES_histograms(
 # ggsave("figures/Histogram_FRic_SES.png", plot_SES, width = 10, height = 6, dpi = 300)
 
 # ------------------------------------------------------------------------------
-# Dissimilarity among uses  [LONG]
+# Dissimilarity among uses
 # ------------------------------------------------------------------------------
 
-# LONG: pairwise comparison of every community density, cell by cell.
-
-# dissimilarity_result <- dissim_large(TPDc_Fish)
+dissimilarity_result <- dissim_large(TPDc_Fish)
 # saveRDS(dissimilarity_result, "output/dissimilarity_result.rds")
-
-# ---- Recommended: load the saved result ----
-dissimilarity_result <- readRDS("output/dissimilarity_result.rds")
 
 dissim_df_shared <- as.data.frame(as.table(
   as.matrix(dissimilarity_result$communities$P_shared)
 ))
 
-# ---- Table 1: drop the global category, rename the uses, keep one triangle ----
-filtered_dissim_df_shared <- dissim_df_shared %>%
+filtered_dissim_df_shared <- dissim_df_shared %>% # Table 1
   dplyr::filter(
     !Var1 %in% c("all_uses", "all", "All uses"),
     !Var2 %in% c("all_uses", "all", "All uses")
@@ -155,9 +135,5 @@ plot_dissim <- ggplot2::ggplot(
   ) +
   ggplot2::theme_minimal(base_size = 14) +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-
-# ------------------------------------------------------------------------------
-# Save
-# ------------------------------------------------------------------------------
 
 # ggsave("figures/plot_dissim.png", plot_dissim, width = 10, height = 6, dpi = 300)
