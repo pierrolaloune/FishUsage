@@ -5,7 +5,7 @@
 Data, scripts and workflows for a study of human uses of freshwater fishes.
 
 The analysis covers **8,970 freshwater fish species** and five categories of human
-use (fisheries, aquaculture, aquarium trade, recreational fishing, bait). It asks
+use (fisheries, aquaculture, aquarium trade, recreational fishing). It asks
 where used species sit in the morphological space of freshwater fishes, whether
 morphologically distinctive species are more likely to be targeted, and how much
 of that space would be lost if threatened species disappeared.
