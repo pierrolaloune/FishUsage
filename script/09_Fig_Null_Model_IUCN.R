@@ -13,6 +13,14 @@
 # relative to global FRic, filters and orders usage categories, and generates a
 # multi-panel global figure plus per-usage panels saved to disk. Finally, it
 # builds a summary table of IUCN categories by human-use group.
+#
+# Reading the figure: each panel shows one human use. The x axis is the
+# cumulative loss scenario (-CR, then -EN, and so on), the y axis the remaining
+# morphological richness as a percentage of the current value. Thin lines are the
+# 999 null replicates, the thick line is the observed trajectory, and filled
+# points mark the scenarios where the observed loss is significant.
+#
+# Requires 04_Null_model_IUCN.R to have been run.
 
 # ------------------------------------------------------------------------------
 # Data import
@@ -40,6 +48,7 @@ Fric_obs <- res_FRic_threat %>%
   distinct() %>%
   rename(Usage = usage, Threat = threat_category)
 
+# ---- Shorter axis labels: each scenario adds one category to the previous one ----
 renames <- c(
   "CR"             = "-CR",
   "CR_EN"          = "-EN",
@@ -52,6 +61,7 @@ res_SES  <- res_SES  %>% mutate(threat_category = dplyr::recode(threat_category,
 Fric_obs <- Fric_obs %>% mutate(Threat = dplyr::recode(Threat, !!!renames))
 Fric_sim <- Fric_sim %>% mutate(Threat = dplyr::recode(Threat, !!!renames))
 
+# ---- Attach the p-value, which drives the point shape ----
 Fric_obs <- Fric_obs %>%
   left_join(
     res_SES %>% dplyr::select(Usage = usage, Threat = threat_category, Pval),
@@ -62,6 +72,9 @@ Fric_obs <- Fric_obs %>%
 # ------------------------------------------------------------------------------
 # Convert to percentage of global FRic
 # ------------------------------------------------------------------------------
+
+# 100 % is the current richness of the use; values below show the loss caused by
+# the disappearance of the threatened species.
 
 FRich_Fish  <- readRDS("output/FRich_Fish.rds")
 FRic_global <- FRich_Fish["all"]
@@ -76,6 +89,7 @@ Fric_sim <- Fric_sim %>%
 # Filter & order
 # ------------------------------------------------------------------------------
 
+# Bait is dropped: too few species for a meaningful null distribution.
 Fric_obs <- Fric_obs %>% filter(Usage != "Bait")
 Fric_sim <- Fric_sim %>% filter(Usage != "Bait")
 
@@ -131,33 +145,36 @@ print(p)
 # Per-usage panels
 # ------------------------------------------------------------------------------
 
+# Same figure, one file per use, with an extra "Current" point on the left that
+# anchors every trajectory at 100 %.
+
 unique_usages <- levels(Fric_obs$Usage)
 
 for (u in unique_usages) {
-  
+
   current_point_obs <- data.frame(
     Threat      = "Current",
     res         = 100,
     Usage       = u,
     point_shape = NA
   )
-  
+
   obs_full <- bind_rows(
     current_point_obs,
     Fric_obs %>% filter(Usage == u)
   )
-  
+
   current_point_sim <- Fric_sim %>%
     filter(Usage == u) %>%
     group_by(Iteration) %>%
     summarise(res = 100, Threat = "Current", .groups = "drop") %>%
     mutate(Usage = u)
-  
+
   sim_full <- bind_rows(
     current_point_sim,
     Fric_sim %>% filter(Usage == u)
   )
-  
+
   fig_u <- ggplot() +
     geom_line(
       data = sim_full %>% arrange(Iteration, Threat),
@@ -197,7 +214,9 @@ for (u in unique_usages) {
       x = " ",
       y = "Morphological richness (%)"
     )
-  
+
+  # NOTE: absolute path, valid only on the original machine. Replace it with a
+  # relative path such as "figures/FRic_{...}.jpeg" before publishing the repo.
   ggsave(
     filename = glue::glue("C:/Users/pierr/OneDrive/Documents/GitHub/fishUsages/figures/FRic_{gsub(' ', '_', u)}.jpeg"),
     plot     = fig_u,
@@ -212,6 +231,9 @@ for (u in unique_usages) {
 # Save
 # ------------------------------------------------------------------------------
 
+# NOTE: writes to plot/, which is not one of the project directories
+# (dataOriginal, dataPrepared, figures, output). Create it first, or point this
+# to figures/.
 ggsave(
   filename = "plot/Fig_null_model_IUCN.png",
   plot     = p,
@@ -222,8 +244,10 @@ ggsave(
 )
 
 # ------------------------------------------------------------------------------
-# Summary table IUCN × usage
+# Summary table: IUCN x usage
 # ------------------------------------------------------------------------------
+
+# Number of species per IUCN category and per use, reported in the text.
 
 IUCN <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt")
 pca_trait <- readRDS("output/pca_trait.rds")

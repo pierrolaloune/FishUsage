@@ -1,123 +1,145 @@
-# FishUsage
+# Human Targeting of Morphologically Unique Fishes
 
-### Data and code to reproduce the analyses from  
-**“Targeting morphologically unique fishes amplifies the risk of functional erosion”**  
-*Pierre Bouchet, Sébastien Brosse & Aurèle Toussaint*  
-CNRS, Université de Toulouse
+[![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21848877.svg)](https://doi.org/10.5281/zenodo.21848877)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 
----
+This repository contains the code, data, figures, and result tables supporting the article:
 
-## Overview
+**Title:** *Human targeting of morphologically unique fishes amplifies the risk of functional erosion*
+**Journal:** *Nature Communications*
+**Authors:** Pierre Bouchet<sup>1</sup>\*, Sébastien Brosse<sup>1</sup>, Aurèle Toussaint<sup>1</sup>
+**Affiliation:** <sup>1</sup> Centre de Recherche sur la Biodiversité et l'Environnement (CRBE), Université de Toulouse, Toulouse INP, CNRS, IRD, 118 route de Narbonne, 31062 Toulouse, France
+**Correspondence:** \*Pierre Bouchet, pierre.bouchet@utoulouse.fr
 
-This repository contains all data and R scripts necessary to reproduce the analyses presented in the manuscript *Targeting morphologically unique fishes amplifies the risk of functional erosion* (manuscript under review).
-
-The project evaluates whether human uses of freshwater fishes—including food, ornamental trade, and recreational activities—are concentrated on narrow portions of the global fish functional spectrum. We test the expectation that humans select a non-random subset of species, and that morphologically unique species, often already threatened, are disproportionately targeted, increasing risks of functional erosion.
-
-The repository covers all freshwater fish species globally, integrating phylogeny, functional morphology, human use information, and conservation status (IUCN assessments).
-
----
-
-## Repository Structure
-
-### Data folders
-
-**`dataOriginal/`**  
-Contains the raw input datasets used in the project:
-- Raw functional trait data from **FishMorph**
-- Global freshwater fish phylogeny from **Rabosky et al. (2018)**
-- IUCN Red List assessments
-- `species_to_update_900_done`: manual taxonomic updates and corrections based on IUCN assessments  
-
-These files correspond to the original, unmodified datasets.
-
-**`dataPrepared/Fish/`**  
-Contains all processed and prepared datasets used for the analyses.  
-Users may work directly with these files or regenerate them using the data-loading scripts.  
-This folder includes the cleaned, formatted, and harmonized datasets required for the analysis pipeline.
+The analysis covers **8,970 freshwater fish species** and five categories of human
+use (fisheries, aquaculture, aquarium trade, recreational fishing, bait). It asks
+where used species sit in the morphological space of freshwater fishes, whether
+morphologically distinctive species are more likely to be targeted, and how much
+of that space would be lost if threatened species disappeared.
 
 ---
 
-### Outputs and figures
+## Repository structure
 
-**`figures/`**  
-Folder intended for storing figures created by the analysis scripts.  
-It is initially empty except for the cleaned manuscript figures, allowing users to export their own figures into this directory.
+```text
+FishUsage/
+├── script/                   # Analysis pipeline, run in numeric order
+│   ├── 000_library.R                 # Packages: installs what is missing, then loads
+│   ├── 000_functions.R               # Every custom function, no analysis of its own
+│   ├── 000_LoadDataR.R               # Traits, phylogeny, IUCN status, human uses
+│   ├── 000_ScrappingData.R           # Human uses scraped from FishBase pages
+│   ├── 01_*.R … 07_*.R               # Analyses: functional richness, null models,
+│   │                                 #   distinctiveness, imputation error
+│   ├── 08_*.R … 12_*.R               # Figures: functional spaces, richness loss,
+│   │                                 #   distinctiveness, PCA loadings, deficit maps
+│   ├── 13_*.R, 100_*.R               # Sensitivity to the trait imputation
+│   ├── plot_pca_correlation_circle.R # Alternative correlation circles
+│   ├── web scrapping percentage.R    # What the scraping added over rfishbase
+│   └── test_new_funspace.R           # Exploratory, not used in the article
+│
+├── dataOriginal/             # Source datasets, as downloaded
+│                             #   FISHMORPH traits and phylogeny, IUCN Red List
+│
+├── dataPrepared/Fish/        # Intermediate tables built by 000_LoadDataR.R
+│                             #   cleaned traits, imputed traits, phylogenetic PCoA
+│
+├── output/                   # Precomputed results reloaded by the scripts (~150 MB)
+│
+├── figures/                  # Main and supplementary figures
+│   ├── Clean/                # Publication versions
+│   └── individual_panels/    # One square panel per use
+│
+├── README.md                 # This file
+├── LICENSE                   # MIT for the code, plus the terms of the source datasets
+└── .gitignore
+```
 
-*Important note on figure layout:*
-- *Some final manuscript figures were assembled using Inkscape, solely for graphical layout and panel arrangement (e.g. alignment, spacing, labeling).*
-- *The scientific content of all figures is reproducible*
-- *The final multi-panel layout itself is not programmatically reproduced*
-- *This layout step does not involve any data manipulation or analytical transformation*
-
-**`output/`**  
-Contains all outputs generated by the scripts, including intermediate objects, result tables, and `.rds` files used in downstream analyses.
-
----
-
-### Code
-
-**`script/`**  
-Contains all R scripts used in the project (10 scripts total), including:
-- `000_library.R` — package loading
-- `000_functions.R` — custom functions used throughout the analysis
-- `000_LoadData.R` — data import, cleaning, and preparation
-- `000_ScrappingData.R` — optional script to reproduce the scraping workflow
-- `0XX_analysis_*.R` — sequential analysis scripts
-- `0XX_fig_*.R` — scripts generating manuscript and supplementary figures  
-
-Scripts are numbered to ensure full reproducibility when run in order.
-
----
-
-## Scripts overview
-
-Scripts follow a numbered sequential pipeline:
-
-- **000_library.R** — loads all required R packages  
-- **000_functions.R** — functions used across analyses  
-- **000_LoadData.R** — imports, cleans, and prepares all datasets  
-- **000_ScrappingData.R** — optional scraping workflow (not required to rerun)  
-- **0XX_analysis_*.R** — analysis scripts  
-- **0XX_figures_*.R** — figure-generation scripts  
-
-Some analyses are computationally intensive.  
-Long HPC-dependent steps are commented out, and corresponding processed `.rds` files are provided to allow full reproduction of results without rerunning heavy computations.
+Every script uses paths relative to the project root, so R must be started from
+the folder that contains `script/`, `dataOriginal/`, `dataPrepared/`, `figures/`
+and `output/`.
 
 ---
 
-## Reproducibility workflow (simple)
+## Data availability
 
-1. Clone the repository  
-2. Open R (≥ 4.3.2)  
-3. Run `000_library.R`  
-4. Run `000_functions.R`  
-5. Run `000_LoadData.R`  
-6. Run the numbered analysis scripts in order  
-7. Run the figure scripts to reproduce all manuscript and supplementary figures  
+The datasets and all precomputed results are included in this repository, under
+`dataOriginal/`, `dataPrepared/` and `output/`. They are also archived on Zenodo
+together with the code: [10.5281/zenodo.21848877](https://doi.org/10.5281/zenodo.21848877).
 
----
+Original sources:
 
-## Expected outputs
-
-Running the full pipeline reproduces:
-- All main figures included in the manuscript  
-- All supplementary figures  
-- Intermediate and final result tables used in the analyses  
+| Dataset | Source |
+| --- | --- |
+| Morphological traits and phylogeny | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. *Global Ecol. Biogeogr.* **30**, 2330–2336 (2021). |
+| Length, weight, human uses | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages. |
+| Conservation status | IUCN. The IUCN Red List of Threatened Species. (2025). |
 
 ---
 
-## System requirements
+## Reproducing the analysis
 
-- **R version:** 4.3.2 or later  
-- **Operating systems tested:** Windows and MacOS  
-- **Dependencies:** All required R packages are listed and loaded in `000_library.R`  
-- **Non-standard hardware:** None required  
+Requires **R ≥ 4.1** (the native pipe `|>` is used in places).
 
-Typical installation time on a standard desktop computer is a few minutes.  
-Typical runtime ranges from minutes to several hours depending on whether computationally intensive steps are re-run.
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/pierrolaloune/FishUsage.git
+   cd FishUsage
+   ```
+
+2. Open R from the project root, then source the setup scripts in this order, at
+   the start of every session:
+
+   ```r
+   source("script/000_library.R")    # installs any missing package, then loads all of them
+   source("script/000_functions.R")  # defines every custom function
+   source("script/000_LoadDataR.R")  # builds the trait, IUCN and human-use tables
+   ```
+
+3. Run any numbered script. Each one reloads what it needs from `output/`, so
+   they are independent and can be run in any order:
+
+   ```r
+   source("script/01_FRic_Dissim.R")
+   ```
+
+   The one exception is `web scrapping percentage.R`, which reuses an object
+   built by `000_LoadDataR.R` and must run in the same session.
+
+Figures are written to `figures/`, result tables to `output/`.
+
+> **A note on runtime.** Web scraping, random-forest imputation and the null
+> models with 999 replicates each take hours. Every one of those steps is
+> **already commented out**, with its result stored in `output/` or
+> `dataPrepared/` and reloaded on the next line, so the scripts run end to end as
+> they are. Each is flagged `[LONG]` in the section title of the script it
+> belongs to. Uncomment a block only to rebuild that file from scratch.
+
+---
+
+## How to cite
+
+If you use this code or these data, please cite the article and the code archive:
+
+> Bouchet, P., Brosse, S., & Toussaint, A. Human targeting of morphologically unique fishes amplifies the risk of functional erosion. *Nature Communications*. https://doi.org/\<ARTICLE-DOI\>
+
+- **Code and data:** [10.5281/zenodo.21848877](https://doi.org/10.5281/zenodo.21848877)
 
 ---
 
 ## License
 
-This code is released under the **MIT License**.
+The code in `script/`, and the results derived from it, are released under the
+[MIT License](https://opensource.org/licenses/MIT). See [`LICENSE`](LICENSE).
+
+The datasets redistributed under `dataOriginal/` are not covered by that licence.
+They remain subject to the terms of FISHMORPH, FishBase and the IUCN Red List,
+listed in [`LICENSE`](LICENSE) and cited under
+[Data availability](#data-availability).
+
+## Contact
+
+Pierre Bouchet, CRBE, Université de Toulouse, France
+
+- Email: pierre.bouchet@utoulouse.fr
+- Website: <https://pierrolaloune.github.io/>

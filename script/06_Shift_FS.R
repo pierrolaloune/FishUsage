@@ -13,6 +13,11 @@
 # cleaned species/IUCN data, iterates over human-use categories to plot functional
 # space shifts after removing threatened species, and finally generates a shared
 # diverging colorbar legend for the shift maps.
+#
+# Outputs: figures/FS_shift_<usage>.jpg and figures/FS_shift_legend.jpg.
+# The maps themselves are drawn by plot_functional_shift_by_usage(), defined in
+# 000_functions.R. That function reads pca_trait, IUCN, TPDs_fish, limX and limY
+# from the global environment, so all of them must exist before the loop below.
 
 # ------------------------------------------------------------------------------
 # Data preparation
@@ -20,39 +25,42 @@
 
 pca_trait <- readRDS("output/pca_trait.rds")
 
-# Flip PC1 for readability
+# ---- Flip PC1 so that large-bodied species sit on the right ----
 pca_trait$traits_scores[, 1] <- -pca_trait$traits_scores[, 1]
 
-# SD estimates for 2D kernel smoothing
+# ---- Bandwidths for the 2D kernel smoothing (plug-in estimator) ----
 sd_traits <- sqrt(diag(
   ks::Hpi.diag(pca_trait$traits_scores[, c(1, 2)])
 ))
 
 # ------------------------------------------------------------------------------
-# 2D TPD calculation (long)
+# 2D TPD calculation  [LONG]
 # ------------------------------------------------------------------------------
 
-TPD_2D <- TPDsMean( # long recommended skip
-  species = rownames(pca_trait$traits_scores),
-  means   = pca_trait$traits_scores[, c(1, 2)],
-  sds     = matrix(
-    rep(sd_traits, nrow(pca_trait$traits_scores)),
-    byrow = TRUE, ncol = 2
-  ),
-  covar        = FALSE,
-  alpha        = 0.95,
-  samples      = NULL,
-  trait_ranges = NULL,
-  n_divisions  = 200,
-  tolerance    = 0.05
-)
+# LONG: one bivariate density per species on a 200 x 200 grid.
 
+# TPD_2D <- TPDsMean(
+#   species = rownames(pca_trait$traits_scores),
+#   means   = pca_trait$traits_scores[, c(1, 2)],
+#   sds     = matrix(
+#     rep(sd_traits, nrow(pca_trait$traits_scores)),
+#     byrow = TRUE, ncol = 2
+#   ),
+#   covar        = FALSE,
+#   alpha        = 0.95,
+#   samples      = NULL,
+#   trait_ranges = NULL,
+#   n_divisions  = 200,
+#   tolerance    = 0.05
+# )
+#
 # saveRDS(TPD_2D, "output/TPD_2D.rds")
 
 # ------------------------------------------------------------------------------
 # Load objects
 # ------------------------------------------------------------------------------
 
+# ---- Recommended: load the saved 2D TPD ----
 TPDs_fish <- readRDS("output/TPD_2D.rds")
 uni_clean <- readRDS("output/uni_clean.rds")
 
@@ -63,6 +71,7 @@ IUCN <- uni_clean %>%
 # Plot parameters
 # ------------------------------------------------------------------------------
 
+# Axis limits are fixed so that every map shares the same frame.
 limX   <- c(-7, 7)
 limY   <- c(-7, 7)
 usages <- c("Fisheries", "Aquaculture", "Aquarium",
@@ -79,6 +88,8 @@ for (u in usages) {
 # ------------------------------------------------------------------------------
 # Legend (colorbar)
 # ------------------------------------------------------------------------------
+
+# Diverging scale centred on 0, drawn once and shared by every map above.
 
 Min    <- -0.3
 Max    <- 0.3

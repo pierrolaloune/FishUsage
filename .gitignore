@@ -1,0 +1,40 @@
+# ------------------------------------------------------------------------------
+# R
+# ------------------------------------------------------------------------------
+
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.Ruserdata
+.Renviron
+*.Rcheck/
+*_cache/
+/cache/
+
+# Knitr and R Markdown
+*.utf8.md
+*.knit.md
+*-tikzDictionary
+
+# ------------------------------------------------------------------------------
+# Project
+# ------------------------------------------------------------------------------
+
+# Orphan results kept locally, not part of the published analysis
+output/_unused/
+
+# Stray output folder from the exploratory script
+outputs/
+
+# ------------------------------------------------------------------------------
+# OS and editors
+# ------------------------------------------------------------------------------
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+~$*
+.vscode/
+.idea/

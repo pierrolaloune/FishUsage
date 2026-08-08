@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 Pierre Bouchet
+Copyright (c) 2026 Pierre Bouchet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+NOTE ON THE DATA
+
+The MIT License above applies to the code in this repository (the contents of
+script/) and to the results derived from it.
+
+It does NOT apply to the third-party datasets redistributed under dataOriginal/,
+which remain subject to the terms of their respective providers:
+
+  - FISHMORPH  Brosse, S. et al. Global Ecology and Biogeography 30, 2330-2336
+               (2021).
+  - FishBase   Froese, R. & Pauly, D. FishBase (2025). www.fishbase.org
+  - IUCN       The IUCN Red List of Threatened Species (2025).
+               www.iucnredlist.org/terms/terms-of-use
+
+Please consult and comply with those terms before reusing or redistributing
+these datasets.

@@ -13,6 +13,11 @@
 # lists, and runs a null model to quantify the reduction in functional richness
 # (FRic) when threatened species are removed. It then computes SES values from
 # the null distributions and loads saved outputs for downstream reporting.
+#
+# Output: Table S1b (SES of the FRic loss per use x threat category).
+#
+# The null model is commented out; its result is stored in output/ and reloaded
+# immediately afterwards, so the script runs end to end as it is.
 
 # ------------------------------------------------------------------------------
 # Data import
@@ -24,16 +29,20 @@ pca_trait        <- readRDS("output/pca_trait.rds")
 MatriceFish      <- read.csv("output/MatriceFish.csv")
 TraitFishImputed <- read.table("dataPrepared/Fish/TraitFishImputed.txt")
 
+# ---- Restore the species names and the row names lost by read.csv ----
 colnames(MatriceFish)[-1] <- gsub("\\.", " ", colnames(MatriceFish)[-1])
 rownames(MatriceFish)     <- MatriceFish$X
 MatriceFish$X             <- NULL
 
-# Remove the artificial “all” row
+# ---- Drop the artificial "all" row: only real uses are tested here ----
 MatriceFish <- MatriceFish[rownames(MatriceFish) != "all", , drop = FALSE]
 
 # ------------------------------------------------------------------------------
 # Threat categories
 # ------------------------------------------------------------------------------
+
+# Nested scenarios: each level adds one IUCN category to the previous one, which
+# simulates an increasingly severe loss of threatened species.
 
 species_names <- rownames(TraitFishImputed)
 
@@ -50,24 +59,30 @@ threatsp <- lapply(IUCN_levels, function(levels) {
 })
 
 # ------------------------------------------------------------------------------
-# Null model: FRic reduction by threat category
+# Null model: FRic reduction by threat category  [LONG]
 # ------------------------------------------------------------------------------
 
-res_FRic_threat <- calc_FRic_by_threat( # long, recommended skip
-  MatriceFish,
-  TPDsp    = tpd_trait,
-  threatsp = threatsp,
-  nrep     = 999
-)
+# LONG: 999 random draws for each of the 5 uses x 5 threat categories, each draw
+# rebuilding a community TPD.
 
+# res_FRic_threat <- calc_FRic_by_threat(
+#   MatriceFish,
+#   TPDsp    = tpd_trait,
+#   threatsp = threatsp,
+#   nrep     = 999
+# )
+#
 # saveRDS(res_FRic_threat, "output/res_FRic_threat.rds")
+
+# ---- Recommended: load the saved result ----
 res_FRic_threat <- readRDS("output/res_FRic_threat.rds")
 
 # ------------------------------------------------------------------------------
 # SES computation
 # ------------------------------------------------------------------------------
 
-res_SES <- calc_SES_table(res_FRic_threat) # Table S1 b
+# ---- Table S1b ----
+res_SES <- calc_SES_table(res_FRic_threat)
 
 # ------------------------------------------------------------------------------
 # Save

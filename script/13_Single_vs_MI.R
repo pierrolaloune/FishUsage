@@ -1,8 +1,33 @@
 # ------------------------------------------------------------------------------
-# Multiple imputation sensitivity analysis
-# 100 independent missForest runs — parallelized (variables)
-# PCA recomputed at each imputation + Procrustes all pairs
-# Response to Reviewer 3, Comment 1
+# Script : 13_Single_vs_MI
+# Author : P. Bouchet
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# METHODOLOGICAL SUMMARY
+# ------------------------------------------------------------------------------
+
+# Multiple imputation sensitivity analysis: 100 independent missForest runs,
+# parallelized over variables.
+#
+# The main analyses rely on a single imputation of the missing traits. This
+# script checks that this choice does not drive the results, by comparing:
+#   1. Inter-imputation variability - how much an imputed value moves from one
+#      run to the next (NRMSE, as a percentage of the trait range).
+#   2. Single vs multiple - the gap between the single imputation used in the
+#      paper and the mean of the 100 runs.
+#   3. Geometric stability - Procrustes correlation between the PCA spaces
+#      obtained from each pair of imputations.
+#
+# The two heavy steps (the 100 imputations, and the pairwise Procrustes) are
+# commented out; their results are stored in output/ and reloaded immediately
+# afterwards, so the script runs end to end as it is.
+#
+# See also 100_Imputation_SI_MI.R, which runs the same analysis and adds the
+# variability of the PCA scores themselves.
+
+# ------------------------------------------------------------------------------
+# Packages
 # ------------------------------------------------------------------------------
 
 library(missForest)
@@ -15,11 +40,13 @@ library(tidyr)
 # Data import + preparation
 # ------------------------------------------------------------------------------
 
+# ---- Traits with their original missing values ----
 traitsData <- read.table(
   "dataPrepared/Fish/TraitFishMissing.txt",
   header = TRUE, stringsAsFactors = FALSE
 ) %>% dplyr::select(-IUCN)
 
+# ---- Reference single imputation, the one used in the paper ----
 traitsDataSingle <- read.table(
   "dataPrepared/Fish/TraitFishImputed.txt",
   header = TRUE, stringsAsFactors = FALSE
@@ -27,6 +54,7 @@ traitsDataSingle <- read.table(
 
 selectedTraits <- colnames(traitsDataSingle)
 
+# ---- Phylogenetic coordinates, used as extra predictors ----
 pcoaPhyl <- read.table(
   "dataPrepared/Fish/pcoaPhylogenyFish.txt",
   header = TRUE, stringsAsFactors = FALSE
@@ -40,14 +68,17 @@ sp_names  <- rownames(traitsData)
 sp_phylo  <- gsub("_", " ", rownames(pcoaPhyl))
 common_sp <- intersect(sp_names, sp_phylo)
 
+# ---- Imputation matrix: traits + phylogenetic eigenvectors ----
 imputation_matrix <- cbind(
   traitsData[, selectedTraits],
   pcoaPhyl[gsub(" ", "_", common_sp), ]
 )
 
+# ---- Positions of the true missing values, per trait ----
 na_positions <- lapply(selectedTraits, function(col) which(is.na(traitsData[[col]])))
 names(na_positions) <- selectedTraits
 
+# ---- Values the single imputation put at those positions ----
 single_na_vals <- dplyr::bind_rows(lapply(selectedTraits, function(col) {
   idx <- na_positions[[col]]
   if (length(idx) == 0) return(NULL)
@@ -55,6 +86,7 @@ single_na_vals <- dplyr::bind_rows(lapply(selectedTraits, function(col) {
              single_val = traitsDataSingle[idx, col])
 }))
 
+# ---- Reference PCA (built on the single imputation) ----
 pca_trait  <- readRDS("output/pca_trait.rds")
 ref_scores <- pca_trait$pca_object$scores[, 1:4]        # species x PC1-PC4
 mean_ref   <- attr(pca_trait$traits_scaled, "scaled:center")[selectedTraits]
@@ -68,6 +100,10 @@ n_cores  <- max(1, parallel::detectCores() - 1)
 # Function
 # ------------------------------------------------------------------------------
 
+# Recomputes a PCA from one imputed table and returns the species scores.
+# The sign of each axis is arbitrary in a PCA, so every axis is flipped when it
+# is negatively correlated with the reference; without this the comparison
+# between imputations would be meaningless.
 compute_pca_scores <- function(ximp, selectedTraits, mean_ref, sd_ref,
                                ref_scores, sp_names, N_PC) {
   traits_imp    <- as.data.frame(ximp)[, selectedTraits, drop = FALSE]
@@ -85,86 +121,94 @@ compute_pca_scores <- function(ximp, selectedTraits, mean_ref, sd_ref,
 }
 
 # ------------------------------------------------------------------------------
-# Run
+# Run: 100 independent missForest imputations  [LONG]
 # ------------------------------------------------------------------------------
 
-M <- 100
+# LONG: each imputation is a full random-forest run (100 trees, 10 iterations)
+# over the whole trait table. Count in hours, not minutes.
 
-imputed_na  <- vector("list", M)
-scores_list <- vector("list", M)
-n_cores <- min(ncol(imputation_matrix))
-  
-cat(sprintf("Starting %d imputations (parallelize = 'variables', %d cores)...\n",
-            M, n_cores))
-t_start <- proc.time()["elapsed"]
+# M <- 100
+#
+# imputed_na  <- vector("list", M)
+# scores_list <- vector("list", M)
+# n_cores <- min(ncol(imputation_matrix))
+#
+# cat(sprintf("Starting %d imputations (parallelize = 'variables', %d cores)...\n",
+#             M, n_cores))
+# t_start <- proc.time()["elapsed"]
+#
+# doParallel::registerDoParallel(cores = n_cores)
+#
+# for (m in seq_len(M)) {
+#
+#   t_m <- proc.time()["elapsed"]
+#   cat(sprintf(" Imputation %d / %d ...", m, M))
+#
+#   set.seed(100 + (m * 12))
+#
+#   ximp <- tryCatch(
+#     missForest(
+#       xmis        = imputation_matrix,
+#       ntree       = 100,
+#       maxiter     = 10,
+#       parallelize = "variables",
+#       verbose     = FALSE
+#     )$ximp,
+#     error = function(e) {
+#       message(sprintf(" ERROR: %s", e$message))
+#       NULL
+#     }
+#   )
+#
+#   cat(sprintf(" done in %.1f min\n", (proc.time()["elapsed"] - t_m) / 60))
+#
+#   if (is.null(ximp)) next
+#
+#   # Store imputed values at NA positions (trait-level NRMSE)
+#   imputed_na[[m]] <- dplyr::bind_rows(lapply(selectedTraits, function(col) {
+#     idx <- na_positions[[col]]
+#     if (length(idx) == 0) return(NULL)
+#     data.frame(imp = m, trait = col, sp = sp_names[idx],
+#                imp_value = ximp[idx, col])
+#   }))
+#
+#   # Recompute PCA and store scores
+#   scores_list[[m]] <- tryCatch(
+#     compute_pca_scores(ximp, selectedTraits, mean_ref, sd_ref,
+#                        ref_scores, sp_names, N_PC),
+#     error = function(e) {
+#       message(sprintf(" PCA ERROR m = %d: %s", m, e$message))
+#       NULL
+#     }
+#   )
+# }
+#
+# doParallel::stopImplicitCluster()
+#
+# elapsed_total <- round(proc.time()["elapsed"] - t_start, 0)
+# cat(sprintf("Total: %.1f min\n", elapsed_total / 60))
+#
+# # Keep only the imputations that completed
+# ok   <- !sapply(imputed_na, is.null) & !sapply(scores_list, is.null)
+# M_ok <- sum(ok)
+# cat(sprintf("%d / %d successful\n", M_ok, M))
+#
+# imputed_long <- dplyr::bind_rows(imputed_na[ok])
+# scores_list  <- scores_list[ok]
+#
+# saveRDS(imputed_long, "output/MI_imputed_na_values.rds")
+# saveRDS(scores_list,  "output/MI_scores_list.rds")
 
-doParallel::registerDoParallel(cores = n_cores)
-
-for (m in seq_len(M)) {
-  
-  t_m <- proc.time()["elapsed"]
-  cat(sprintf(" Imputation %d / %d ...", m, M))
-  
-  set.seed(100 +(m * 12) )
-  
-  ximp <- tryCatch(
-    missForest(
-      xmis        = imputation_matrix,
-      ntree       = 100,
-      maxiter     = 10,
-      parallelize = "variables",
-      verbose     = FALSE
-    )$ximp,
-    error = function(e) {
-      message(sprintf(" ERROR: %s", e$message))
-      NULL
-    }
-  )
-  
-  cat(sprintf(" done in %.1f min\n", (proc.time()["elapsed"] - t_m) / 60))
-  
-  if (is.null(ximp)) next
-  
-  # Store imputed values at NA positions (trait-level NRMSE)
-  imputed_na[[m]] <- dplyr::bind_rows(lapply(selectedTraits, function(col) {
-    idx <- na_positions[[col]]
-    if (length(idx) == 0) return(NULL)
-    data.frame(imp = m, trait = col, sp = sp_names[idx],
-               imp_value = ximp[idx, col])
-  }))
-  
-  # Recompute PCA and store scores
-  scores_list[[m]] <- tryCatch(
-    compute_pca_scores(ximp, selectedTraits, mean_ref, sd_ref,
-                       ref_scores, sp_names, N_PC),
-    error = function(e) {
-      message(sprintf(" PCA ERROR m = %d: %s", m, e$message))
-      NULL
-    }
-  )
-}
-
-doParallel::stopImplicitCluster()
-
-elapsed_total <- round(proc.time()["elapsed"] - t_start, 0)
-cat(sprintf("Total: %.1f min\n", elapsed_total / 60))
-
-ok   <- !sapply(imputed_na, is.null) & !sapply(scores_list, is.null)
-M_ok <- sum(ok)
-cat(sprintf("%d / %d successful\n", M_ok, M))
-
-imputed_long <- dplyr::bind_rows(imputed_na[ok])
-scores_list  <- scores_list[ok]
-
-saveRDS(imputed_long, "output/MI_imputed_na_values.rds")
-saveRDS(scores_list,  "output/MI_scores_list.rds")
-
+# ---- Recommended: load the saved results ----
 imputed_long <- readRDS("output/MI_imputed_na_values.rds")
 scores_list <- readRDS("output/MI_scores_list.rds")
 
 # ------------------------------------------------------------------------------
-# Inter imputation
+# Analysis 1: inter-imputation variability
 # ------------------------------------------------------------------------------
+
+# How far apart the 100 runs place the same missing value, expressed as a
+# percentage of the observed range of the trait.
 
 obs_ranges <- sapply(selectedTraits, function(col) {
   diff(range(traitsData[[col]], na.rm = TRUE))
@@ -188,8 +232,11 @@ print(nrmse_summary)
 write.csv(nrmse_summary, "output/MI_NRMSE_by_trait.csv", row.names = FALSE)
 
 # ------------------------------------------------------------------------------
-# Single. vs. MI
+# Analysis 2: single vs multiple imputation
 # ------------------------------------------------------------------------------
+
+# Gap between the value used in the paper and the mean of the 100 runs, again as
+# a percentage of the trait range.
 
 comparison_summary <- imputed_long %>%
   group_by(trait, sp) %>%
@@ -211,47 +258,56 @@ write.csv(comparison_summary, "output/MI_single_vs_multiple_by_trait.csv",
           row.names = FALSE)
 
 # ------------------------------------------------------------------------------
-# Procrustes
+# Analysis 3: Procrustes stability of the functional space  [LONG]
 # ------------------------------------------------------------------------------
 
-n_pairs <- M_ok * (M_ok - 1) / 2
-cat(sprintf("\nComputing Procrustes for all %d pairs...\n", n_pairs))
+# A Procrustes correlation r close to 1 means the two PCA spaces are the same up
+# to rotation, translation and scaling: the shape of the functional space does
+# not depend on which imputation was used.
 
-proc_results <- vector("list", n_pairs)
-idx <- 1
+# LONG: M_ok * (M_ok - 1) / 2 pairwise comparisons, i.e. ~4,950 for 100 runs.
 
-for (i in 1:(M_ok - 1)) {
-  for (j in (i + 1):M_ok) {
-    
-    proc_ij <- tryCatch(
-      vegan::protest(
-        X            = scores_list[[i]],
-        Y            = scores_list[[j]],
-        permutations = 0,
-        symmetric    = TRUE
-      ),
-      error = function(e) NULL
-    )
-    
-    if (!is.null(proc_ij)) {
-      proc_results[[idx]] <- data.frame(
-        imp_i = i,
-        imp_j = j,
-        m2    = round(proc_ij$ss, 6),
-        r     = round(proc_ij$t0, 6)
-      )
-    }
-    
-    idx <- idx + 1
-  }
-  
-  if (i %% 10 == 0) {
-    cat(sprintf("  Procrustes: %d / %d first indices done\n", i, M_ok - 1))
-  }
-}
+# n_pairs <- M_ok * (M_ok - 1) / 2
+# cat(sprintf("\nComputing Procrustes for all %d pairs...\n", n_pairs))
+#
+# proc_results <- vector("list", n_pairs)
+# idx <- 1
+#
+# for (i in 1:(M_ok - 1)) {
+#   for (j in (i + 1):M_ok) {
+#
+#     proc_ij <- tryCatch(
+#       vegan::protest(
+#         X            = scores_list[[i]],
+#         Y            = scores_list[[j]],
+#         permutations = 0,
+#         symmetric    = TRUE
+#       ),
+#       error = function(e) NULL
+#     )
+#
+#     if (!is.null(proc_ij)) {
+#       proc_results[[idx]] <- data.frame(
+#         imp_i = i,
+#         imp_j = j,
+#         m2    = round(proc_ij$ss, 6),
+#         r     = round(proc_ij$t0, 6)
+#       )
+#     }
+#
+#     idx <- idx + 1
+#   }
+#
+#   if (i %% 10 == 0) {
+#     cat(sprintf("  Procrustes: %d / %d first indices done\n", i, M_ok - 1))
+#   }
+# }
+#
+# proc_df <- dplyr::bind_rows(proc_results)
+# write.csv(proc_df, "output/MI_procrustes_pairs.csv", row.names = FALSE)
 
-proc_df <- dplyr::bind_rows(proc_results)
-write.csv(proc_df, "output/MI_procrustes_pairs.csv", row.names = FALSE)
+# ---- Recommended: load the saved result ----
+proc_df <- read_csv("output/MI_procrustes_pairs.csv")
 
 cat("\n=== PROCRUSTES SUMMARY (all pairs) ===\n")
 cat(sprintf("Mean r  : %.4f\n", mean(proc_df$r,  na.rm = TRUE)))

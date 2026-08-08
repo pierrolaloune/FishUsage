@@ -11,9 +11,13 @@
 # runs a null model to simulate mean PCA scores per human-use community. It
 # computes SES for observed mean PCA values against simulated distributions and
 # prepares long-format data for visualization. It produces (i) histograms of
-# simulated PCA distributions with observed values overlaid, (ii) a heatmap of
-# signed trait loadings across PCA axes, and (iii) a PCA correlation circle for
-# PC1–PC2 based on loadings and explained variance.
+# simulated PCA distributions with observed values overlaid, and (ii) a heatmap
+# of signed trait loadings across PCA axes.
+#
+# Output: Table S3 (SES of the mean PCA position per use).
+#
+# The null model is commented out; its result is stored in output/ and reloaded
+# immediately afterwards, so the script runs end to end as it is.
 
 # ------------------------------------------------------------------------------
 # Data import
@@ -26,30 +30,37 @@ pca_trait_use <- readRDS("output/pca_trait.rds")
 
 MatriceFish <- read.csv("output/MatriceFish.csv")
 
+# ---- Restore the species names and the row names lost by read.csv ----
 colnames(MatriceFish)[-1] <- gsub("\\.", " ", colnames(MatriceFish)[-1])
 rownames(MatriceFish)     <- MatriceFish$X
 MatriceFish$X             <- NULL
 
 # ------------------------------------------------------------------------------
-# Null model of PCA mean trait value
+# Null model of PCA mean trait value  [LONG]
 # ------------------------------------------------------------------------------
 
-resultats_null <- generate_null_means( # long recommended skip
-  pca_trait      = pca_trait,
-  MatriceFish    = MatriceFish,
-  nb_simulations = 999
-)
+# LONG: 999 randomizations of the use assignments, per human use.
 
-resultats_null$all <- NULL
-
+# resultats_null <- generate_null_means(
+#   pca_trait      = pca_trait,
+#   MatriceFish    = MatriceFish,
+#   nb_simulations = 999
+# )
+#
+# # Drop the global "all" category, which has no null distribution of its own.
+# resultats_null$all <- NULL
+#
 # saveRDS(resultats_null, "output/PCA_mean_trait_values_results.rds")
+
+# ---- Recommended: load the saved result ----
 PCA_mean_trait_values_results <- readRDS("output/PCA_mean_trait_values_results.rds")
 
 # ------------------------------------------------------------------------------
 # SES computation
 # ------------------------------------------------------------------------------
 
-PCA_mean_trait_values_SES <- get_SES_from_PCA_results( # Table S3
+# ---- Table S3 ----
+PCA_mean_trait_values_SES <- get_SES_from_PCA_results(
   results_list = PCA_mean_trait_values_results
 )
 
@@ -59,21 +70,24 @@ PCA_mean_trait_values_SES <- get_SES_from_PCA_results( # Table S3
 # Build long format for plotting
 # ------------------------------------------------------------------------------
 
-df_plot <- purrr::map_dfr(names(PCA_mean_trait_values_results), function(usage) { 
-  
+# One row per simulated value, with the matching observed value repeated so that
+# ggplot can draw both on the same facet.
+
+df_plot <- purrr::map_dfr(names(PCA_mean_trait_values_results), function(usage) {
+
   simulated <- as.data.frame(
     PCA_mean_trait_values_results[[usage]]$simulated
   )[, c("Comp.1", "Comp.2")]
-  
+
   simulated_long <- tidyr::pivot_longer(
     simulated,
     cols      = everything(),
     names_to  = "Component",
     values_to = "Simulated_value"
   )
-  
+
   observed <- PCA_mean_trait_values_results[[usage]]$observed[c("Comp.1", "Comp.2")]
-  
+
   simulated_long %>%
     dplyr::mutate(
       Usage          = usage,
@@ -111,7 +125,6 @@ p <- ggplot2::ggplot(df_plot, aes(x = Simulated_value)) +
   )
 
 print(p)
-# ggsave("plot/PCA_mean_trait_values_plot.png", p, width = 6, height = 10, dpi = 300)
 
 # ------------------------------------------------------------------------------
 # PCA loading structure
@@ -161,7 +174,6 @@ plot_trait_contrib <- ggplot2::ggplot(
   )
 
 print(plot_trait_contrib)
-# ggsave("plot/plot_trait_contrib.png", plot_trait_contrib, width = 5, height = 5, dpi = 300)
 
 # ------------------------------------------------------------------------------
 # Save

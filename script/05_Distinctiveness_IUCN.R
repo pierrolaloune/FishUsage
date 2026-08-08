@@ -8,10 +8,13 @@
 # ------------------------------------------------------------------------------
 
 # This script loads fish TPDs and the PCA/use object, builds a community matrix
-# (uses × species), and computes functional uniqueness (Ui) and functional
+# (uses x species), and computes functional uniqueness (Ui) and functional
 # distinctiveness from Euclidean trait-space distances. It then merges uniqueness
 # and distinctiveness at the species level, visualizes their relationship, runs a
 # Pearson correlation test, and provides save lines for downstream reuse.
+#
+# Uniqueness (Ui) is the distance to the nearest neighbour in trait space;
+# distinctiveness is the mean distance to every other species. Output: Figure S2.
 
 # ------------------------------------------------------------------------------
 # Data import
@@ -24,8 +27,11 @@ species_scores <- as.data.frame(pca_trait$traits_scores[, 1:4])
 species_uses   <- as.data.frame(pca_trait$uses)
 
 # ------------------------------------------------------------------------------
-# Community matrix (uses × species)
+# Community matrix (uses x species)
 # ------------------------------------------------------------------------------
+
+# Same matrix as in 000_LoadDataR.R: one row per use, plus a final row "all"
+# holding every species, which serves as the global reference.
 
 species_uses$rownames   <- rownames(species_uses)
 species_scores$rownames <- rownames(species_scores)
@@ -51,6 +57,9 @@ MatriceFish <- rbind(MatriceFish, MatriceFish_1)
 # Uniqueness calculation
 # ------------------------------------------------------------------------------
 
+# Distances are computed on the first four PCA axes, the dimensions retained by
+# the parallel analysis in computePCAandTPDs().
+
 species_scores_mat <- as.matrix(pca_trait$traits_scores[, 1:4])
 dist_matrix <- as.matrix(dist(species_scores_mat, method = "euclidean"))
 
@@ -59,6 +68,9 @@ uni <- funrar::uniqueness(MatriceFish, dist_matrix)
 # ------------------------------------------------------------------------------
 # Distinctiveness calculation
 # ------------------------------------------------------------------------------
+
+# Computed on the "all" row only, so that distinctiveness is measured against the
+# whole species pool rather than within a single use.
 
 dist_res <- funrar::distinctiveness(
   MatriceFish["all", , drop = FALSE],
@@ -88,17 +100,18 @@ df_uni_dist <- data.frame(
 # Plot: uniqueness vs distinctiveness
 # ------------------------------------------------------------------------------
 
-plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) + # Figure S2
+# ---- Figure S5 ----
+plot_ui_dist <- ggplot2::ggplot(df_uni_dist, aes(x = Ui, y = Distinctiveness)) +
   ggplot2::geom_point(alpha = 0.5, size = 2) +
   ggplot2::geom_smooth(method = "lm", color = "orange", se = TRUE) +
   ggplot2::labs(
     x = "Ui (Functional Uniqueness)",
     y = "Functional Distinctiveness",
-    title = "Relationship between Ui and Distinctiveness"
+    title = " "
   ) +
   ggplot2::theme_minimal(base_size = 13)
 
-# ggsave("figures/plot_ui_dist.jpg", plot_ui_dist, width = 10, height = 7, dpi = 300)
+# ggsave("figures/Clean/figS5.png", plot_ui_dist, width = 10, height = 7, dpi = 300)
 
 # ------------------------------------------------------------------------------
 # Correlation test
