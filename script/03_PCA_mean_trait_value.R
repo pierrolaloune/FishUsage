@@ -54,7 +54,13 @@ MatriceFish$X             <- NULL
 
 # ---- Recommended: load the saved result ----
 PCA_mean_trait_values_results <- readRDS("output/PCA_mean_trait_values_results.rds")
-
+for (usage in names(PCA_mean_trait_values_results)) {
+  PCA_mean_trait_values_results[[usage]]$observed["Comp.1"] <-
+    -PCA_mean_trait_values_results[[usage]]$observed["Comp.1"]
+  
+  PCA_mean_trait_values_results[[usage]]$simulated[, "Comp.1"] <-
+    -PCA_mean_trait_values_results[[usage]]$simulated[, "Comp.1"]
+}
 # ------------------------------------------------------------------------------
 # SES computation
 # ------------------------------------------------------------------------------
@@ -127,59 +133,9 @@ p <- ggplot2::ggplot(df_plot, aes(x = Simulated_value)) +
 print(p)
 
 # ------------------------------------------------------------------------------
-# PCA loading structure
-# ------------------------------------------------------------------------------
-
-loadings_mat <- as.matrix(
-  pca_trait$pca_object$loadings[, paste0("Comp.", 1:4)]
-)
-
-contrib_df <- as.data.frame(loadings_mat)
-contrib_df$Trait <- rownames(contrib_df)
-
-contrib_long <- contrib_df %>%
-  tidyr::pivot_longer(
-    cols = starts_with("Comp."),
-    names_to = "Component",
-    values_to = "Loading"
-  ) %>%
-  dplyr::mutate(
-    Sign         = ifelse(Loading >= 0, "Positive", "Negative"),
-    Contribution = 100 * (Loading^2)
-  )
-
-plot_trait_contrib <- ggplot2::ggplot(
-  contrib_long,
-  aes(x = Component, y = reorder(Trait, abs(Loading)), fill = Loading)
-) +
-  ggplot2::geom_tile(color = "white") +
-  ggplot2::geom_text(
-    aes(label = sprintf("%.2f", Loading)),
-    size = 3.2
-  ) +
-  ggplot2::scale_fill_gradient2(
-    low = "firebrick", mid = "white", high = "steelblue",
-    midpoint = 0, name = "Loading\n(coef)"
-  ) +
-  ggplot2::labs(
-    title = "Signed loadings of traits on PCA axes",
-    x = "Principal Component",
-    y = "Trait"
-  ) +
-  ggplot2::theme_minimal(base_size = 12) +
-  ggplot2::theme(
-    panel.grid  = element_blank(),
-    axis.text.y = element_text(face = "bold"),
-    plot.title  = element_text(hjust = 0.5, face = "bold")
-  )
-
-print(plot_trait_contrib)
-
-# ------------------------------------------------------------------------------
 # Save
 # ------------------------------------------------------------------------------
 
 # saveRDS(PCA_mean_trait_values_results, "output/PCA_mean_trait_values_results.rds")
 # saveRDS(PCA_mean_trait_values_SES, "output/PCA_mean_trait_values_SES.rds")
 # ggsave("plot/PCA_mean_trait_values_plot.png", p, width = 6, height = 10, dpi = 300)
-# ggsave("plot/plot_trait_contrib.png", plot_trait_contrib, width = 5, height = 5, dpi = 300)

@@ -49,7 +49,7 @@ matching_species <- c(
   "Anguilla anguilla",
   "Luciobarbus brachycephalus",
   "Wallago attu",
-  "Chitala blanci",
+  "Salmo trutta",
   "Dermogenys pusilla",
   "Huso huso",
   "Oreochromis andersonii",

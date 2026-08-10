@@ -277,7 +277,7 @@ ggsave(
 )
 
 # ------------------------------------------------------------------------------
-# 3. Heatmap of the trait-axis correlations (Figure S4)
+# 3. Heatmap of the trait-axis correlations (Figure S2)
 # ------------------------------------------------------------------------------
 
 library(ggplot2)

@@ -495,6 +495,7 @@ species_ref   <- intersect(species_pca, species_uses)
 
 pca_trait$uses <- uses_df[species_ref, usage_cols, drop = FALSE]
 use <- pca_trait$uses
+score <- pca_trait$traits_scores
 
 # saveRDS(pca_trait, "output/pca_trait.rds")
 pca_trait <- readRDS("output/pca_trait.rds")

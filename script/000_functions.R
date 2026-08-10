@@ -650,13 +650,13 @@ calc_FRic_by_threat <- function(MatriceFish, TPDsp, threatsp, nrep = 999) {
 # Compares one observed value with its null distribution and returns the
 # observed value, the SES, the mean and confidence interval of the null
 # distribution, an empirical p-value and the number of replicates.
-sesandpvalue <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 2) {
+sesandpvalue <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 3) {
   if (length(rand) < 2 || all(rand == rand[1])) {
     SES <- NA
   } else {
     SES <- (obs - mean(rand)) / sd(rand)
   }
-  pValsSES <- rank(c(obs, rand), ties.method = "random")[1] / (length(rand) + 1)
+  pValsSES <- rank(c(obs, rand), ties.method = "random")[1] / (length(rand) + 2)
   results <- round(
     c(obs, SES, mean(rand), quantile(rand, prob = probs, na.rm = TRUE), pValsSES, nreps),
     rnd
@@ -667,7 +667,7 @@ sesandpvalue <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 2) {
 
 # Applies sesandpvalue() to every human use: one row of observed FRic against
 # the matching simulated values.
-get_SES <- function(obs_df, sim_df, probs = c(0.025, 0.975), rnd = 2) {
+get_SES <- function(obs_df, sim_df, probs = c(0.025, 0.975), rnd = 6) {
   results_list <- lapply(seq_len(nrow(obs_df)), function(i) {
     usage_i <- obs_df$Use[i]
     obs_i   <- obs_df$FRich[i]
@@ -752,7 +752,7 @@ generate_null_means <- function(pca_trait, MatriceFish, nb_simulations = 999) {
 
 # Turns the output of generate_null_means() into a flat SES table, one row per
 # use x PCA axis.
-get_SES_from_PCA_results <- function(results_list, probs = c(0.025, 0.975), rnd = 10) {
+get_SES_from_PCA_results <- function(results_list, probs = c(0.025, 0.975), rnd = 4) {
   output <- list()
   for (usage in names(results_list)) {
     obs_vec <- results_list[[usage]]$observed

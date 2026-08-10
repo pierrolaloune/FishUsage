@@ -29,7 +29,7 @@ required_packages <- unique(c(
   "patchwork", "performance", "scico", "fields", "rfishbase",
   "pbapply", "ggrepel", "AICcmodavg", "lme4", "DHARMa", "missRanger",
   "paletteer", "naniar", "mice", "VIM", "visdat", "broom", "knitr", "mgcv",
-  "emayili"
+  "emayili", "taxize"
 ))
 
 # ------------------------------------------------------------------------------
