@@ -1,6 +1,6 @@
 # FishUsage
 
-[![DOI](https://zenodo.org/badge/1109088306.svg)](https://doi.org/10.5281/zenodo.21848876)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21873314.svg)](https://doi.org/10.5281/zenodo.21873314)
 
 Data, scripts and workflows for a study of human uses of freshwater fishes.
 
@@ -14,7 +14,7 @@ of that space would be lost if threatened species disappeared.
 
 ## Repository structure
 
-```text
+```
 FishUsage/
 ├── script/                   # Analysis pipeline, run in numeric order
 │   ├── 000_library.R                 # Packages: installs what is missing, then loads
@@ -30,9 +30,6 @@ FishUsage/
 │   ├── web scrapping percentage.R    # What the scraping added over rfishbase
 │   └── test_new_funspace.R           # Exploratory, not part of the final analysis
 │
-├── dataOriginal/             # Source datasets, as downloaded
-│                             #   FISHMORPH traits and phylogeny, IUCN Red List
-│
 ├── dataPrepared/Fish/        # Intermediate tables built by 000_LoadDataR.R
 │                             #   cleaned traits, imputed traits, phylogenetic PCoA
 │
@@ -47,28 +44,50 @@ FishUsage/
 ```
 
 Every script uses paths relative to the project root, so R must be started from
-the folder that contains `script/`, `dataOriginal/`, `dataPrepared/`, `figures/`
-and `output/`.
+the folder that contains `script/`, `dataPrepared/`, `figures/` and `output/`.
+
+Raw source datasets (FISHMORPH traits/phylogeny, FishBase, IUCN Red List) are
+**not redistributed in this repository**; see [Data availability](#data-availability)
+below for how to obtain them from their original providers.
 
 ---
 
 ## Data availability
 
-The datasets and all precomputed results are included in this repository, under
-`dataOriginal/`, `dataPrepared/` and `output/`. They are also archived on Zenodo
-together with the code: [10.5281/zenodo.21848876](https://doi.org/10.5281/zenodo.21848876).
+Because several input datasets are third-party resources with their own
+redistribution terms, this project separates **prepared data** (freely
+redistributable) from **original data** (to be obtained from the original
+providers).
 
-Original sources:
+### Processed data
 
-| Dataset | Source |
-| --- | --- |
-| Morphological traits and phylogeny | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. *Global Ecol. Biogeogr.* **30**, 2330–2336 (2021). |
-| Length, weight, human uses | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages. |
-| Conservation status | IUCN. The IUCN Red List of Threatened Species. (2025). |
+The processed objects (dataPrepared/Fish/) and the precomputed results (output/) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of script/000_LoadDataR.R. They are also archived on Zenodo.
 
-The datasets redistributed under `dataOriginal/` remain subject to the terms of
-their respective providers. Please consult those terms before reusing or
-redistributing them.
+Clone this repository, or download the archive from Zenodo:
+- [10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)
+- Unzip it at the root of the project so that the structure becomes:
+
+```
+FishUsage/
+├── dataPrepared/
+│   └── Fish/        # Cleaned and imputed traits, phylogenetic PCoA
+└── output/           # Precomputed results reloaded by the scripts
+```
+
+### Raw data - original providers
+
+The raw inputs (`dataOriginal/`) are **not redistributed here**, as we do not
+hold the right to redistribute them; they remain subject to the licenses of
+their respective providers. To re-run the full pipeline from scratch
+(`script/000_LoadDataR.R`), obtain them directly from the sources below and
+place them in `dataOriginal/`:
+
+| Dataset                    | Content                                       | Source / access                                                                                                                                                                       |
+| --------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Morphological traits       | Body-shape traits for freshwater fish species | Brosse, S. et al. (2021). FISHMORPH: A global database on morphological traits of freshwater fishes. *Global Ecol. Biogeogr.* **30**, 2330–2336. doi:10.1111/geb.13387 - data on figshare (CC BY)               |
+| Phylogeny                   | Time-calibrated ray-finned fish phylogeny     | Rabosky, D. L. et al. (2019). Data from: An inverse latitudinal gradient in speciation rate for marine fishes. Dryad. Accession code [10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4) |
+| Human uses | Species-level trait and human-use records     | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages.                                       |
+| Conservation status        | IUCN Red List category                        | IUCN Red List iucnredlist.org (terms of use apply)                                                                                                                                  |
 
 ---
 
@@ -78,36 +97,34 @@ Requires **R ≥ 4.1** (the native pipe `|>` is used in places).
 
 1. Clone the repository:
 
-   ```bash
-   git clone https://github.com/pierrolaloune/FishUsage.git
-   cd FishUsage
-   ```
+```
+git clone https://github.com/pierrolaloune/FishUsage.git
+cd FishUsage
+```
 
 2. Open R from the project root, then source the setup scripts in this order, at
-   the start of every session:
+the start of every session:
 
-   ```r
-   source("script/000_library.R")    # installs any missing package, then loads all of them
-   source("script/000_functions.R")  # defines every custom function
-   source("script/000_LoadDataR.R")  # builds the trait, IUCN and human-use tables
-   ```
+```
+source("script/000_library.R")    # installs any missing package, then loads all of them
+source("script/000_functions.R")  # defines every custom function
+source("script/000_LoadDataR.R")  # builds the trait, IUCN and human-use tables
+```
 
 3. Run any numbered script. Each one reloads what it needs from `output/`, so
-   they are independent and can be run in any order:
+they are independent and can be run in any order:
 
-   ```r
-   source("script/01_FRic_Dissim.R")
-   ```
+```
+source("script/01_FRic_Dissim.R")
+```
 
-   The one exception is `web scrapping percentage.R`, which reuses an object
-   built by `000_LoadDataR.R` and must run in the same session.
+The one exception is `web scrapping percentage.R`, which reuses an object
+built by `000_LoadDataR.R` and must run in the same session.
 
 Figures are written to `figures/`, result tables to `output/`.
 
 > **A note on runtime.** Web scraping, random-forest imputation and the null
-> models with 999 replicates each take hours. Every one of those steps is
-> **already commented out**, with its result stored in `output/` or
-> `dataPrepared/` and reloaded on the next line, so the scripts run end to end as
+> models with 999 replicates each take hours. Every one of those steps is **already commented out**, with its result stored in `output/` or `dataPrepared/` and reloaded on the next line, so the scripts run end to end as
 > they are. Each is flagged `[LONG]` in the section title of the script it
 > belongs to. Uncomment a block only to rebuild that file from scratch.
 
@@ -117,7 +134,7 @@ Figures are written to `figures/`, result tables to `output/`.
 
 If you use this code or these data, please cite the archive:
 
-> Bouchet, P. pierrolaloune/FishUsage. Zenodo. https://doi.org/10.5281/zenodo.21848876
+> Bouchet, P. pierrolaloune/FishUsage. Zenodo. <https://doi.org/10.5281/zenodo.21873314>
 
 ---
 
@@ -125,5 +142,5 @@ If you use this code or these data, please cite the archive:
 
 Pierre Bouchet, CRBE, Université de Toulouse, France
 
-- Email: pierre.bouchet@utoulouse.fr
+- Email: <pierre.bouchet@utoulouse.fr>
 - Website: <https://pierrolaloune.github.io/>
