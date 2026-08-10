@@ -134,7 +134,7 @@ Figures are written to `figures/`, result tables to `output/`.
 
 If you use this code or these data, please cite the archive:
 
-> Bouchet, P. pierrolaloune/FishUsage. Zenodo. <https://doi.org/10.5281/zenodo.21873314>
+> Pierre Bouchet, Brosse, S.& Toussaint, A. (2026). pierrolaloune/FishUsage: v2 (Version v2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21873314
 
 ---
 
@@ -142,5 +142,5 @@ If you use this code or these data, please cite the archive:
 
 Pierre Bouchet, CRBE, Université de Toulouse, France
 
-- Email: <pierre.bouchet@utoulouse.fr>
+- Email: <pierre.bouchet@utoulouse.fr> or <pierrebdef@gmail.com>
 - Website: <https://pierrolaloune.github.io/>
