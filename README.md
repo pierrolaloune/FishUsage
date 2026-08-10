@@ -5,7 +5,7 @@
 Data, scripts and workflows for a study of human uses of freshwater fishes.
 
 The analysis covers **8,970 freshwater fish species** and five categories of human
-use (fisheries, aquaculture, aquarium, bait, game fish). It asks
+use (fisheries, aquaculture, aquarium trade, recreational fishing). It asks
 where used species sit in the morphological space of freshwater fishes, whether
 morphologically distinctive species are more likely to be targeted, and how much
 of that space would be lost if threatened species disappeared.
@@ -16,38 +16,30 @@ of that space would be lost if threatened species disappeared.
 
 ```
 FishUsage/
-├── script/                            # Analysis pipeline
-│   ├── 000_library.R                  # Packages: installs what is missing, then loads
-│   ├── 000_functions.R                # Every custom function, no analysis of its own
-│   ├── 000_LoadDataR.R                # Traits, phylogeny, IUCN status, human uses
-│   ├── 000_ScrappingData.R            # Human uses scraped from FishBase pages
-│   ├── 01_FRic_Dissim.R               # Functional richness and dissimilarity
-│   ├── 02_FSpaces_Usages.R            # Functional spaces per use category
-│   ├── 03_PCA_mean_trait_value.R      # Null model on mean PCA scores
-│   ├── 04_Null_model_IUCN.R           # FRic loss under nested threat scenarios
-│   ├── 05_Distinctiveness_IUCN.R      # Uniqueness and distinctiveness
-│   ├── 06_Shift_FS.R                  # 2D TPD and functional space shifts
-│   ├── 07_imputation_error.R          # missForest imputation error
-│   ├── 08_Fig_FSpaces_Usages.R        # Figure: functional spaces
-│   ├── 09_Fig_Null_Model_IUCN.R       # Figure: functional richness loss
-│   ├── 10_Fig_Distinctiveness.R       # Figure: distinctiveness
-│   ├── 11_Fig_Loadings_PCA.R          # Figure: PCA loadings heatmap
-│   ├── 12_FS_Shifts_TPD.R             # Figure: functional deficit maps
-│   ├── 13_Single_vs_MI.R              # Single vs multiple imputation
-│   ├── 100_Imputation_SI_MI.R         # 100 missForest imputations
-│   ├── plot_pca_correlation_circle.R  # Alternative correlation circles
-│   ├── web scrapping percentage.R     # What the scraping added over rfishbase
-│   └── test_new_funspace.R            # Exploratory, not part of the final analysis
+├── script/                   # Analysis pipeline, run in numeric order
+│   ├── 000_library.R                 # Packages: installs what is missing, then loads
+│   ├── 000_functions.R               # Every custom function, no analysis of its own
+│   ├── 000_LoadDataR.R               # Traits, phylogeny, IUCN status, human uses
+│   ├── 000_ScrappingData.R           # Human uses scraped from FishBase pages
+│   ├── 01_*.R … 07_*.R               # Analyses: functional richness, null models,
+│   │                                 #   distinctiveness, imputation error
+│   ├── 08_*.R … 12_*.R               # Figures: functional spaces, richness loss,
+│   │                                 #   distinctiveness, PCA loadings, deficit maps
+│   ├── 13_*.R, 100_*.R               # Sensitivity to the trait imputation
+│   ├── plot_pca_correlation_circle.R # Alternative correlation circles
+│   ├── web scrapping percentage.R    # What the scraping added over rfishbase
+│   └── test_new_funspace.R           # Exploratory, not part of the final analysis
 │
-├── dataPrepared/Fish/                 # Intermediate tables built by 000_LoadDataR.R
-│                                      #   cleaned traits, imputed traits, phylogenetic PCoA
+├── dataPrepared/Fish/        # Intermediate tables built by 000_LoadDataR.R
+│                             #   cleaned traits, imputed traits, phylogenetic PCoA
 │
-├── output/                            # Precomputed results reloaded by the scripts (~190 MB)
+├── output/                   # Precomputed results reloaded by the scripts (~150 MB)
 │
-├── figures/v1.0.0/                    # Main (fig1-fig4) and supplementary
-│                                      #   (figS1-figS5) figures, PDF
+├── figures/                  # Main and supplementary figures
+│   ├── Clean/                # Final versions
+│   └── individual_panels/    # One square panel per use
 │
-├── README.md                          # This file
+├── README.md                 # This file
 └── .gitignore
 ```
 
@@ -69,7 +61,7 @@ providers).
 
 ### Processed data
 
-The processed objects (`dataPrepared/Fish/`) and the precomputed results (`output/`) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of `script/000_LoadDataR.R`. They are also archived on Zenodo.
+The processed objects (`dataPrepared/Fish/`) and the precomputed results (`output/`) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of `script/000_LoadDataR.R.` They are also archived on Zenodo.
 
 Clone this repository, or download the archive from Zenodo:
 - [10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)
@@ -95,7 +87,7 @@ place them in `dataOriginal/`:
 | Morphological traits       | Morphological traits measured on freshwater fish species | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. Global Ecol. Biogeogr. 30, 2330–2336 (2021). - data on figshare (CC BY) [here](https://doi.org/10.6084/m9.figshare.14891412)             |
 | Phylogeny                   | Data from: An inverse latitudinal gradient in speciation rate for marine fishes     | Rabosky, Daniel L.; Chang, Jonathan; Title, Pascal O. et al. (2019). Data from: An inverse latitudinal gradient in speciation rate for marine fishes [Dataset]. Dryad. [https://doi.org/10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4)|
 | Human uses | Human uses record     | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages [https://www.fishbase.org/](https://www.fishbase.org/).                                       |
-| Conservation status        | IUCN Red List category                        | IUCN Red List [iucnredlist.org](https://www.iucnredlist.org/) (terms of use apply)                                                                                                                                  |
+| Conservation status        | IUCN Red List category                        | IUCN Red List [iucnredlist.org](iucnredlist.org) (terms of use apply)                                                                                                                                  |
 
 ---
 
