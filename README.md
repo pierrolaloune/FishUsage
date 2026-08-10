@@ -1,6 +1,6 @@
 # FishUsage
 
-[![Code DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21848876.svg)](https://doi.org/10.5281/zenodo.21848876)
+[![DOI](https://zenodo.org/badge/1109088306.svg)](https://doi.org/10.5281/zenodo.21848876)
 
 Data, scripts and workflows for a study of human uses of freshwater fishes.
 
