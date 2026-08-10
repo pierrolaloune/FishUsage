@@ -84,10 +84,10 @@ place them in `dataOriginal/`:
 
 | Dataset                    | Content                                       | Source / access                                                                                                                                                                       |
 | --------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Morphological traits       | Body-shape traits for freshwater fish species | Brosse, S. et al. (2021). FISHMORPH: A global database on morphological traits of freshwater fishes. *Global Ecol. Biogeogr.* **30**, 2330–2336. doi:10.1111/geb.13387 - data on figshare (CC BY)               |
-| Phylogeny                   | Time-calibrated ray-finned fish phylogeny     | Rabosky, D. L. et al. (2019). Data from: An inverse latitudinal gradient in speciation rate for marine fishes. Dryad. Accession code [10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4) |
-| Human uses | Species-level trait and human-use records     | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages.                                       |
-| Conservation status        | IUCN Red List category                        | IUCN Red List iucnredlist.org (terms of use apply)                                                                                                                                  |
+| Morphological traits       | Morphological traits measured on freshwater fish species | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. Global Ecol. Biogeogr. 30, 2330–2336 (2021). - data on figshare (CC BY) [here](https://doi.org/10.6084/m9.figshare.14891412)             |
+| Phylogeny                   | Data from: An inverse latitudinal gradient in speciation rate for marine fishes     | Rabosky, Daniel L.; Chang, Jonathan; Title, Pascal O. et al. (2019). Data from: An inverse latitudinal gradient in speciation rate for marine fishes [Dataset]. Dryad. [https://doi.org/10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4)|
+| Human uses | Human uses record     | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages [https://www.fishbase.org/](https://www.fishbase.org/).                                       |
+| Conservation status        | IUCN Red List category                        | IUCN Red List [iucnredlist.org](iucnredlist.org) (terms of use apply)                                                                                                                                  |
 
 ---
 
