@@ -61,7 +61,7 @@ providers).
 
 ### Processed data
 
-The processed objects (dataPrepared/Fish/) and the precomputed results (output/) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of script/000_LoadDataR.R. They are also archived on Zenodo.
+The processed objects (`dataPrepared/Fish/`) and the precomputed results (`output/`) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of `script/000_LoadDataR.R.` They are also archived on Zenodo.
 
 Clone this repository, or download the archive from Zenodo:
 - [10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)
