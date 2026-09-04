@@ -138,13 +138,6 @@ Figures are written to `figures/`, result tables to `output/`.
 
 ---
 
-## How to cite
-
-If you use this code or these data, please cite the archive:
-
-> Pierre Bouchet, Brosse, S.& Toussaint, A. (2026). pierrolaloune/FishUsage: v2 (Version v2) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.21873314
-
----
 
 ## Contact
 
