@@ -35,7 +35,9 @@ FishUsage/
 │   ├── 12_FS_Shifts_TPD.R             # Figure: functional deficit maps
 │   ├── 13_Single_vs_MI.R              # Single vs multiple imputation
 │   ├── 100_Imputation_SI_MI.R         # 100 missForest imputations
-│   ├── 101_Web_scrapping.R     # What the scraping added over rfishbase
+│   ├── plot_pca_correlation_circle.R  # Alternative correlation circles
+│   ├── web scrapping percentage.R     # What the scraping added over rfishbase
+│
 │
 ├── dataPrepared/Fish/                 # Intermediate tables built by 000_LoadDataR.R
 │                                      #   cleaned traits, imputed traits, phylogenetic PCoA
