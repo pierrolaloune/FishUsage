@@ -84,8 +84,7 @@ FishUsage/
 
 ### Raw data - original providers
 
-The raw inputs (`dataOriginal/`) are **not redistributed here**, as we do not
-hold the right to redistribute them; they remain subject to the licenses of
+The raw inputs (`dataOriginal/`) are **not redistributed here**; they remain subject to the licenses of
 their respective providers. To re-run the full pipeline from scratch
 (`script/000_LoadDataR.R`), obtain them directly from the sources below and
 place them in `dataOriginal/`:
