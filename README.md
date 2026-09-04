@@ -17,8 +17,8 @@ of that space would be lost if threatened species disappeared.
 ```
 FishUsage/
 ├── script/                            # Analysis pipeline
-│   ├── 000_library.R                  # Packages: installs what is missing, then loads
-│   ├── 000_functions.R                # Every custom function, no analysis of its own
+│   ├── 000_library.R                  # Packages
+│   ├── 000_functions.R                # Every custom function
 │   ├── 000_LoadDataR.R                # Traits, phylogeny, IUCN status, human uses
 │   ├── 000_ScrappingData.R            # Human uses scraped from FishBase pages
 │   ├── 01_FRic_Dissim.R               # Functional richness and dissimilarity
@@ -26,7 +26,7 @@ FishUsage/
 │   ├── 03_PCA_mean_trait_value.R      # Null model on mean PCA scores
 │   ├── 04_Null_model_IUCN.R           # FRic loss under nested threat scenarios
 │   ├── 05_Distinctiveness_IUCN.R      # Uniqueness and distinctiveness
-│   ├── 06_Shift_FS.R                  # 2D TPD and functional space shifts
+│   ├── 06_Shift_FS.R                  # TPD and functional space shifts
 │   ├── 07_imputation_error.R          # missForest imputation error
 │   ├── 08_Fig_FSpaces_Usages.R        # Figure: functional spaces
 │   ├── 09_Fig_Null_Model_IUCN.R       # Figure: functional richness loss
@@ -44,7 +44,7 @@ FishUsage/
 │
 ├── output/                            # Precomputed results reloaded by the scripts (~190 MB)
 │
-├── figures/v1.0.0/                    # Main (fig1-fig4) and supplementary
+├── figures/                           # Main (fig1-fig4) and supplementary
 │                                      #   (figS1-figS5) figures, PDF
 │
 ├── README.md                          # This file
