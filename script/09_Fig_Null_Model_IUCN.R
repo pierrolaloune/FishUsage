@@ -1,55 +1,20 @@
-# ------------------------------------------------------------------------------
-# Script : 09_Fig_Null_Model_IUCN
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 09_Fig_Null_Model_IUCN ---------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+source("script/000_library.R")
+source("script/000_functions.R")
+source("script/000_layout.R")
 
-# This script loads outputs from the IUCN-based null model of functional richness
-# loss, reshapes simulated and observed FRic values, and attaches significance
-# information (p-values) for plotting. It converts FRic changes into percentages
-# relative to global FRic, filters and orders usage categories, and generates a
-# multi-panel global figure plus per-usage panels saved to disk. Finally, it
-# builds a summary table of IUCN categories by human-use group.
-#
-# Reading the figure: each panel shows one human use. The x axis is the
-# cumulative loss scenario (-CR, then -EN, and so on), the y axis the remaining
-# morphological richness as a percentage of the current value. Thin lines are the
-# 999 null replicates, the thick line is the observed trajectory, and filled
-# points mark the scenarios where the observed loss is significant.
-#
-# Requires 04_Null_model_IUCN.R to have been run.
+# --- Data ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Data import
-# ------------------------------------------------------------------------------
-
-# ---- Inputs ----
 res_SES         <- readRDS("output/res_FRic_threat_SES.rds")
 res_FRic_threat <- readRDS("output/res_FRic_threat.rds")
+FRich_Fish      <- readRDS("output/FRich_Fish.rds")
+pca_trait       <- readRDS("output/pca_trait.rds")
+TPDs_fish       <- readRDS("output/TPD_2D.rds")
+uni_clean       <- readRDS("output/uni_clean.rds")
+IUCN_table      <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt")
 
-# ------------------------------------------------------------------------------
-# Prepare simulated & observed values
-# ------------------------------------------------------------------------------
-
-Fric_sim <- res_FRic_threat %>%
-  pivot_longer(
-    cols      = starts_with("FRic_null_"),
-    names_to  = "Iteration",
-    values_to = "res"
-  ) %>%
-  rename(Usage = usage, Threat = threat_category) %>%
-  dplyr::select(-FRic_obs)
-
-Fric_obs <- res_FRic_threat %>%
-  dplyr::select(usage, threat_category, FRic_obs) %>%
-  distinct() %>%
-  rename(Usage = usage, Threat = threat_category)
-
-# ---- Shorter axis labels: each scenario adds one category to the previous one ----
-renames <- c(
+threat_labels <- c(
   "CR"             = "-CR",
   "CR_EN"          = "-EN",
   "CR_EN_VU"       = "-VU",
@@ -57,221 +22,134 @@ renames <- c(
   "CR_EN_VU_NT_DD" = "-DD"
 )
 
-res_SES  <- res_SES  %>% mutate(threat_category = dplyr::recode(threat_category, !!!renames))
-Fric_obs <- Fric_obs %>% mutate(Threat = dplyr::recode(Threat, !!!renames))
-Fric_sim <- Fric_sim %>% mutate(Threat = dplyr::recode(Threat, !!!renames))
+usage_order <- c("All uses", "Fisheries", "Aquarium", "Game fish", "Aquaculture")
 
-# ---- Attach the p-value, which drives the point shape ----
-Fric_obs <- Fric_obs %>%
+use_cols <- c(
+  "All uses"    = "#9ECF00",
+  "Aquarium"    = "#63A088",
+  "Game fish"   = "#D496A7",
+  "Fisheries"   = "#5EB1BF",
+  "Aquaculture" = "#999999"
+)
+
+# --- FRic trajectories --------------------------------------------------------
+
+Fric_sim <- res_FRic_threat %>%
+  pivot_longer(starts_with("FRic_null_"), names_to = "Iteration", values_to = "res") %>%
+  rename(Usage = usage, Threat = threat_category) %>%
+  dplyr::select(-FRic_obs) %>%
+  mutate(Threat = recode(Threat, !!!threat_labels))
+
+Fric_obs <- res_FRic_threat %>%
+  dplyr::select(usage, threat_category, FRic_obs) %>%
+  distinct() %>%
+  rename(Usage = usage, Threat = threat_category) %>%
+  mutate(Threat = recode(Threat, !!!threat_labels)) %>%
   left_join(
-    res_SES %>% dplyr::select(Usage = usage, Threat = threat_category, Pval),
+    res_SES %>%
+      mutate(threat_category = recode(threat_category, !!!threat_labels)) %>%
+      dplyr::select(Usage = usage, Threat = threat_category, Pval),
     by = c("Usage", "Threat")
   ) %>%
   mutate(point_shape = ifelse(Pval < 0.025, "p-value < 0.025", "non-significant"))
 
-# ------------------------------------------------------------------------------
-# Convert to percentage of global FRic
-# ------------------------------------------------------------------------------
-
-# 100 % is the current richness of the use; values below show the loss caused by
-# the disappearance of the threatened species.
-
-FRich_Fish  <- readRDS("output/FRich_Fish.rds")
 FRic_global <- FRich_Fish["all"]
 
-Fric_obs <- Fric_obs %>%
-  mutate(res = 100 + 100 * (FRic_obs - FRich_Fish[Usage]) / FRic_global)
+Fric_obs <- Fric_obs %>% mutate(res = 100 + 100 * (FRic_obs - FRich_Fish[Usage]) / FRic_global)
+Fric_sim <- Fric_sim %>% mutate(res = 100 + 100 * (res - FRich_Fish[Usage]) / FRic_global)
 
-Fric_sim <- Fric_sim %>%
-  mutate(res = 100 + 100 * (res - FRich_Fish[Usage]) / FRic_global)
+Fric_obs <- Fric_obs %>% filter(Usage != "Bait") %>% mutate(Usage = factor(Usage, levels = usage_order))
+Fric_sim <- Fric_sim %>% filter(Usage != "Bait") %>% mutate(Usage = factor(Usage, levels = usage_order))
 
-# ------------------------------------------------------------------------------
-# Filter & order
-# ------------------------------------------------------------------------------
+delta_nt <- Fric_obs %>%
+  filter(Threat == "-NT") %>%
+  transmute(Usage = as.character(Usage), label = sprintf(" = %.2f%%", res - 100))
 
-# Bait is dropped: too few species for a meaningful null distribution.
-Fric_obs <- Fric_obs %>% filter(Usage != "Bait")
-Fric_sim <- Fric_sim %>% filter(Usage != "Bait")
+# --- FRic loss ----------------------------------------------------------------
 
-usage_order <- c("All uses", "Fisheries", "Aquarium", "Game fish", "Aquaculture")
-
-Fric_obs <- Fric_obs %>% mutate(Usage = factor(Usage, levels = usage_order))
-Fric_sim <- Fric_sim %>% mutate(Usage = factor(Usage, levels = usage_order))
-
-# ------------------------------------------------------------------------------
-# Global figure
-# ------------------------------------------------------------------------------
-
-p <- ggplot() +
-  geom_line(
-    data = Fric_sim %>% arrange(Usage, Iteration, Threat),
-    aes(x = Threat, y = res, group = interaction(Usage, Iteration), color = Usage),
-    alpha = 0.03, size = 0.1
-  ) +
-  geom_point(
-    data = Fric_obs,
-    aes(x = Threat, y = res, color = Usage, shape = point_shape),
-    size = 2.75
-  ) +
-  geom_line(
-    data = Fric_obs,
-    aes(x = Threat, y = res, group = Usage, color = Usage),
-    size = 1
-  ) +
-  geom_hline(yintercept = 100, linetype = "dashed", color = "grey40") +
-  facet_wrap(~Usage, scales = "fixed", nrow = 1) +
-  coord_cartesian(ylim = c(92.5, 100)) +
-  scale_x_discrete(limits = c("-CR", "-EN", "-VU", "-NT", "-DD")) +
-  scale_shape_manual(values = c("p-value < 0.025" = 16, "non-significant" = 1)) +
-  scale_color_manual(values = c(
-    "All uses"    = "#c1ea25",
-    "Aquarium"    = "#63A088",
-    "Game fish"   = "#D496A7",
-    "Fisheries"   = "#5EB1BF",
-    "Aquaculture" = "#999999"
-  )) +
-  theme_minimal(base_size = 14) +
-  theme(legend.position = "bottom") +
-  labs(
-    x = " ",
-    y = "Morphological richness (%)",
-    color = " ",
-    shape = " "
-  )
-
-print(p)
-
-# ------------------------------------------------------------------------------
-# Per-usage panels
-# ------------------------------------------------------------------------------
-
-# Same figure, one file per use, with an extra "Current" point on the left that
-# anchors every trajectory at 100 %.
-
-unique_usages <- levels(Fric_obs$Usage)
-
-for (u in unique_usages) {
-
-  current_point_obs <- data.frame(
-    Threat      = "Current",
-    res         = 100,
-    Usage       = u,
-    point_shape = NA
-  )
-
+plot_fric_use <- function(u) {
   obs_full <- bind_rows(
-    current_point_obs,
+    data.frame(Threat = "Current", res = 100, Usage = u, point_shape = NA),
     Fric_obs %>% filter(Usage == u)
   )
-
-  current_point_sim <- Fric_sim %>%
-    filter(Usage == u) %>%
-    group_by(Iteration) %>%
-    summarise(res = 100, Threat = "Current", .groups = "drop") %>%
-    mutate(Usage = u)
-
   sim_full <- bind_rows(
-    current_point_sim,
+    Fric_sim %>% filter(Usage == u) %>% group_by(Iteration) %>%
+      summarise(res = 100, Threat = "Current", .groups = "drop") %>% mutate(Usage = u),
     Fric_sim %>% filter(Usage == u)
   )
 
-  fig_u <- ggplot() +
+  ggplot() +
     geom_line(
       data = sim_full %>% arrange(Iteration, Threat),
       aes(x = Threat, y = res, group = Iteration, color = Usage),
-      alpha = 0.03, size = 0.1
+      alpha = 0.03, linewidth = 0.1
     ) +
     geom_line(
       data = obs_full %>% arrange(Threat),
       aes(x = Threat, y = res, group = Usage, color = Usage),
-      size = 1
+      linewidth = 1
     ) +
     geom_point(
       data = obs_full,
       aes(x = Threat, y = res, color = Usage, shape = point_shape),
-      size = 2.75,
-      na.rm = TRUE
+      size = 2.75, na.rm = TRUE
     ) +
     geom_hline(yintercept = 100, linetype = "dashed", color = "grey40") +
-    scale_x_discrete(limits = c("Current", "-CR", "-EN", "-VU", "-NT", "-DD")) +
+    scale_x_discrete(limits = c("Current", unname(threat_labels))) +
     coord_cartesian(ylim = c(92.5, 100)) +
     scale_shape_manual(values = c("p-value < 0.025" = 16, "non-significant" = 1)) +
-    scale_color_manual(values = c(
-      "All uses"    = "#9ECF00",
-      "Aquarium"    = "#63A088",
-      "Game fish"   = "#D496A7",
-      "Fisheries"   = "#5EB1BF",
-      "Aquaculture" = "#999999"
-    )) +
+    scale_color_manual(values = use_cols) +
     theme_bw(base_size = 14) +
-    theme(
-      panel.grid       = element_blank(),
-      legend.position  = "none",
-      strip.background = element_blank()
-    ) +
-    labs(
-      title = u,
-      x = " ",
-      y = "Morphological richness (%)"
-    )
-
-  # NOTE: absolute path, valid only on the original machine. Replace it with a
-  # relative path such as "figures/FRic_{...}.jpeg" before publishing the repo.
-  ggsave(
-    filename = glue::glue("C:/Users/pierr/OneDrive/Documents/GitHub/fishUsages/figures/FRic_{gsub(' ', '_', u)}.jpeg"),
-    plot     = fig_u,
-    width    = 6,
-    height   = 5,
-    units    = "in",
-    dpi      = 300
-  )
+    theme(panel.grid = element_blank(), legend.position = "none", strip.background = element_blank()) +
+    labs(title = u, x = " ", y = "Morphological richness (%)")
 }
 
-# ------------------------------------------------------------------------------
-# Save
-# ------------------------------------------------------------------------------
+fric_png <- purrr::map(fig4_uses, function(u) {
+  main <- u == "All uses"
+  p <- plot_fric_use(u) +
+    labs(title = " ", y = if (main) "Morphological richness (%)" else " ") +
+    theme(
+      axis.text.x     = element_text(colour = NA),
+      axis.ticks.x    = if (main) element_line() else element_line(colour = NA),
+      plot.background = element_blank()
+    )
+  panel_png(p, 1800, 1500, res = 300, bg = "transparent")
+})
 
-# NOTE: writes to plot/, which is not one of the project directories
-# (dataOriginal, dataPrepared, figures, output). Create it first, or point this
-# to figures/.
-ggsave(
-  filename = "plot/Fig_null_model_IUCN.png",
-  plot     = p,
-  dpi      = 300,
-  width    = 15,
-  height   = 6,
-  units    = "in"
-)
+# --- Functional space shifts --------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Summary table: IUCN x usage
-# ------------------------------------------------------------------------------
+IUCN <- uni_clean %>% dplyr::select(species, IUCN)
 
-# Number of species per IUCN category and per use, reported in the text.
+map_png <- purrr::map(fig4_uses, ~ panel_png(
+  function() draw_functional_shift(.x, pca_trait, IUCN, TPDs_fish),
+  2000, 1600, res = 300, device = "png", bg = "transparent"
+))
 
-IUCN <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt")
-pca_trait <- readRDS("output/pca_trait.rds")
-use  <- pca_trait$uses
+legend_png <- panel_png(draw_shift_legend, 500, 1600, res = 300, device = "png", bg = "transparent")
 
-IUCN <- IUCN %>% as.data.frame()
-use  <- use  %>% as.data.frame()
+# --- IUCN x use ---------------------------------------------------------------
 
-if (is.null(IUCN$species)) IUCN$species <- rownames(IUCN)
-if (is.null(use$species))  use$species  <- rownames(use)
+use <- as.data.frame(pca_trait$uses)
+if (is.null(IUCN_table$species)) IUCN_table$species <- rownames(IUCN_table)
+use$species <- rownames(use)
 
-merged_df <- IUCN %>%
+summary_table <- IUCN_table %>%
   dplyr::select(species, IUCN) %>%
   filter(!is.na(IUCN)) %>%
-  inner_join(use, by = "species")
-
-usage_cols <- c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "All uses")
-
-df_long <- merged_df %>%
-  pivot_longer(cols = all_of(usage_cols), names_to = "Usage", values_to = "Used") %>%
-  filter(Used == 1)
-
-summary_table <- df_long %>%
+  inner_join(use, by = "species") %>%
+  pivot_longer(c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "All uses"),
+               names_to = "Usage", values_to = "Used") %>%
+  filter(Used == 1) %>%
   group_by(IUCN, Usage) %>%
   summarise(n_species = n_distinct(species), .groups = "drop")
 
 print(summary_table)
+
+# --- Save ---------------------------------------------------------------------
+
+fig_save("figures/fig4", width = 511, height = 225,
+         draw = function() draw_fig4(fric_png, map_png, legend_png, delta_nt))
+
+# --- Session ------------------------------------------------------------------
+
+sessionInfo()

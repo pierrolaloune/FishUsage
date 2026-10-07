@@ -1,383 +1,22 @@
-# ------------------------------------------------------------------------------
-# Script : 10_Fig_Distinctiveness
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 10_Fig_Distinctiveness ---------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+source("script/000_library.R")
+source("script/000_functions.R")
+source("script/000_layout.R")
 
-# This script loads PCA/use data, species-level uniqueness and distinctiveness
-# metrics, and IUCN status, and asks whether morphologically distinctive species
-# are more likely to be exploited by humans.
-#
-# Three complementary views of the same question:
-#   1. Deciles      - the species are split into ten distinctiveness classes and
-#                     the proportion of used species is compared between classes
-#                     (bootstrap confidence intervals, binomial test).
-#   2. GLM          - logistic regression of the probability of being used
-#                     against distinctiveness, globally and per use.
-#   3. GAM          - same model with a smooth term, which allows a non-monotonic
-#                     relationship. This is the version used in the paper.
-#
-# Every model is fitted on the full species pool: a use is always contrasted with
-# all the other species, never with a subsample.
-#
-# Output: Figure 2 (GLM version) [OLD] and Figure 2bis (GAM version) [NEW].
+# --- Data ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Data import
-# ------------------------------------------------------------------------------
-
-# ---- Inputs ----
-pca_trait   <- readRDS("output/pca_trait.rds")
-uni         <- readRDS("output/uni.rds")
-dist        <- readRDS("output/dist.rds")
-iucn        <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt", header = TRUE)
+pca_trait <- readRDS("output/pca_trait.rds")
+dist      <- readRDS("output/dist.rds")
+iucn      <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt", header = TRUE)
 
 species_uses <- pca_trait$uses %>%
   as.data.frame() %>%
   tibble::rownames_to_column("species")
 
-# ------------------------------------------------------------------------------
-# Prepare long datasets (uniqueness & distinctiveness)
-# ------------------------------------------------------------------------------
+USAGE_COLS     <- c("Fisheries", "Aquarium", "Aquaculture", "Game fish")
+usages_to_plot <- c("Fisheries", "Aquarium", "Aquaculture", "Game fish")
 
-# One row per species x use. Species with no use at all are given the single
-# level "Non use", so that they act as the reference group.
-
-# ---- Uniqueness (Ui) ----
-tab <- uni %>%
-  left_join(species_uses, by = "species") %>%
-  left_join(iucn %>% dplyr::select(species, IUCN), by = "species") %>%
-  mutate(`Non use` =
-           if_else(Fisheries + Aquaculture + Aquarium + `Game fish` == 0, 1, 0))
-
-uni_long <- tab %>%
-  rename(Species = species) %>%
-  pivot_longer(
-    c(Fisheries, Aquaculture, Aquarium, `Game fish`),
-    names_to = "Use",
-    values_to = "Use_presence"
-  ) %>%
-  mutate(
-    Use          = if_else(`Non use` == 1 & Use == "Fisheries", "Non use", Use),
-    Use_presence = if_else(Use == "Non use", 1, Use_presence)
-  ) %>%
-  distinct(Species, Use, .keep_all = TRUE)
-
-# ---- Distinctiveness (Dist) ----
-tab2 <- dist %>%
-  left_join(species_uses, by = "species") %>%
-  left_join(iucn %>% dplyr::select(species, IUCN), by = "species") %>%
-  mutate(`Non use` =
-           if_else(Fisheries + Aquaculture + Aquarium + `Game fish` == 0, 1, 0))
-
-dist_long <- tab2 %>%
-  rename(Species = species) %>%
-  pivot_longer(
-    c(Fisheries, Aquaculture, Aquarium, `Game fish`),
-    names_to = "Use",
-    values_to = "Use_presence"
-  ) %>%
-  mutate(
-    Use          = if_else(`Non use` == 1 & Use == "Fisheries", "Non use", Use),
-    Use_presence = if_else(Use == "Non use", 1, Use_presence)
-  ) %>%
-  distinct(Species, Use, .keep_all = TRUE)
-
-# ------------------------------------------------------------------------------
-# Species-level tables for modelling (wide format, full pool)
-# ------------------------------------------------------------------------------
-
-# One row per species, one binary column per usage. Every model built from this
-# table contrasts a usage against the full pool of species.
-
-USAGE_COLS <- c("Fisheries", "Aquarium", "Aquaculture", "Game fish")
-
-species_wide <- tab2 %>%
-  rename(Species = species) %>%
-  mutate(`All uses` = as.numeric(
-    Fisheries + Aquaculture + Aquarium + `Game fish` > 0
-  ))
-
-make_model_data <- function(data, usage_name) {
-  data %>%
-    transmute(
-      Species = Species,
-      Dist    = Dist,
-      Used    = as.numeric(.data[[usage_name]] == 1)
-    )
-}
-
-# ---- Sanity check: every model must run on the full pool ----
-check_pool <- map(c("All uses", USAGE_COLS), ~{
-  d <- make_model_data(species_wide, .x)
-  tibble(Usage = .x, n = nrow(d), n_used = sum(d$Used))
-}) %>%
-  list_rbind()
-
-print(check_pool)
-
-# ------------------------------------------------------------------------------
-# Bootstrapped proportions by variable
-# ------------------------------------------------------------------------------
-
-# 999 resamples of 80 % of the species, which gives the confidence intervals
-# drawn around each decile.
-
-df_ui   <- bootstrap_used_proportions_var(uni_long,  var_name = "Ui")
-df_dist <- bootstrap_used_proportions_var(dist_long, var_name = "Dist")
-
-p_prop_dist <- plot_proportions_var(df_dist, dist_long, var_name = "Dist")
-
-dist_counts <- get_used_species_var(dist_long, "Dist") %>%
-  assign_deciles_var(var_name = "Dist") %>%
-  count(Decile)
-
-# ------------------------------------------------------------------------------
-# Statistical tests on distinctiveness
-# ------------------------------------------------------------------------------
-
-# Each decile is tested against the overall proportion of used species with an
-# exact binomial test; 'ses' expresses the same gap in standard deviations.
-
-dist_species <- get_used_species_var(dist_long, var_name = "Dist") %>%
-  assign_deciles_var(var_name = "Dist")
-
-global_p <- mean(dist_species$Used)
-
-decile_stats <- dist_species %>%
-  group_by(Decile) %>%
-  summarise(
-    n_total = n(),
-    n_used  = sum(Used),
-    prop    = n_used / n_total,
-    .groups = "drop"
-  ) %>%
-  mutate(
-    prop_pct    = prop * 100,
-    p_value_raw = map2_dbl(n_used, n_total,
-                           ~ binom.test(.x, .y, p = global_p)$p.value),
-    ses         = (prop - global_p) /
-      sqrt(global_p * (1 - global_p) / n_total),
-    p_value     = sprintf("%.3f", p_value_raw)
-  ) %>%
-  select(Decile, n_total, n_used, prop, prop_pct, ses, p_value)
-
-print(decile_stats)
-
-# ------------------------------------------------------------------------------
-# Global model: distinctiveness -> probability of being used (GLM)
-# ------------------------------------------------------------------------------
-
-species_dist <- make_model_data(species_wide, "All uses")
-
-glm_dist_use <- glm(Used ~ Dist, data = species_dist, family = binomial)
-summary(glm_dist_use)
-
-coef_info <- summary(glm_dist_use)$coefficients
-slope     <- coef_info["Dist", "Estimate"]
-pval      <- coef_info["Dist", "Pr(>|z|)"]
-
-label_stats <- paste0(
-  "beta = ", sprintf("%.3f", slope),
-  " | p = ", format.pval(pval, digits = 3, eps = .001)
-)
-
-# ---- Plot the global relationship ----
-p_dist_glm <- ggplot(species_dist, aes(x = Dist, y = Used)) +
-  geom_jitter(
-    aes(color = Dist),
-    width = 0, height = 0.05, size = 2, alpha = 0.6
-  ) +
-  geom_smooth(
-    method      = "glm",
-    method.args = list(family = "binomial"),
-    se          = TRUE,
-    color       = "#2B6CB0",
-    fill        = "#2B6CB0",
-    alpha       = 0.25,
-    linewidth   = 1.2
-  ) +
-  scale_color_viridis_c(option = "D", begin = 0.85, end = 0.2,
-                        name = "Distinctiveness") +
-  scale_y_continuous("Probability of being used",
-                     limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-  scale_x_continuous("Morphological distinctiveness") +
-  annotate(
-    "text", x = Inf, y = 0.1, label = label_stats,
-    hjust = 1.05, vjust = -0.3, size = 4.5, color = "black"
-  ) +
-  theme_minimal(base_size = 12)
-
-p_dist_glm
-
-# ------------------------------------------------------------------------------
-# Models by usage category (GLM)
-# ------------------------------------------------------------------------------
-
-# Colour-blind safe palette (Okabe-Ito) used for the GLM panels.
-okabe_ito <- c(
-  "Fisheries"   = "#E69F00",
-  "Aquaculture" = "#56B4E9",
-  "Aquarium"    = "#009E73",
-  "Game fish"   = "#D55E00",
-  "All uses"    = "#7E1E9C"
-)
-
-# One panel for a single use: fits the model, then annotates the plot with its
-# slope and p-value.
-make_usage_plot <- function(data, usage_name) {
-  data_use <- make_model_data(data, usage_name)
-
-  model     <- glm(Used ~ Dist, data = data_use, family = binomial)
-  coef_info <- summary(model)$coefficients
-  slope     <- coef_info["Dist", "Estimate"]
-  pval      <- coef_info["Dist", "Pr(>|z|)"]
-
-  label_stats <- paste0(
-    "beta = ", sprintf("%.3f", slope),
-    " | p = ", format.pval(pval, digits = 2, eps = .001)
-  )
-
-  ggplot(data_use, aes(x = Dist, y = Used)) +
-    geom_jitter(
-      width = 0, height = 0.05, size = 1.5, alpha = 0.6,
-      color = okabe_ito[[usage_name]]
-    ) +
-    geom_smooth(
-      method      = "glm",
-      method.args = list(family = "binomial"),
-      se          = TRUE,
-      linewidth   = 1.1,
-      color       = okabe_ito[[usage_name]],
-      fill        = okabe_ito[[usage_name]],
-      alpha       = 0.25
-    ) +
-    scale_y_continuous("Probability of being used", limits = c(0, 1)) +
-    scale_x_continuous("Morphological distinctiveness") +
-    annotate(
-      "text", x = Inf, y = 0.8, label = label_stats,
-      hjust = 1.05, vjust = -0.3, size = 3, color = "black"
-    ) +
-    ggtitle(usage_name) +
-    theme_minimal(base_size = 12)
-}
-
-# Same panel for the "All uses" category, drawn larger as the main panel.
-make_all_use_plot <- function(data) {
-  data_all <- make_model_data(data, "All uses")
-
-  model     <- glm(Used ~ Dist, data = data_all, family = binomial)
-  coef_info <- summary(model)$coefficients
-  slope     <- coef_info["Dist", "Estimate"]
-  pval      <- coef_info["Dist", "Pr(>|z|)"]
-
-  label_stats <- paste0(
-    "beta = ", sprintf("%.3f", slope),
-    " | p = ", format.pval(pval, digits = 2, eps = .001)
-  )
-
-  ggplot(data_all, aes(x = Dist, y = Used)) +
-    geom_jitter(
-      width = 0, height = 0.05, size = 1.5, alpha = 0.6,
-      color = okabe_ito[["All uses"]]
-    ) +
-    geom_smooth(
-      method      = "glm",
-      method.args = list(family = "binomial"),
-      se          = TRUE,
-      color       = okabe_ito[["All uses"]],
-      fill        = okabe_ito[["All uses"]],
-      alpha       = 0.25,
-      linewidth   = 1.2
-    ) +
-    scale_y_continuous("Probability of being used", limits = c(0, 1)) +
-    scale_x_continuous("Morphological distinctiveness") +
-    annotate(
-      "text", x = Inf, y = 0.1, label = label_stats,
-      hjust = 1.05, vjust = -0.3, size = 4.5, color = "black"
-    ) +
-    ggtitle("All uses") +
-    theme_minimal(base_size = 12)
-}
-
-# ------------------------------------------------------------------------------
-# Combine panels (GLM)
-# ------------------------------------------------------------------------------
-
-# Layout: the "All uses" panel on the left, the four uses in a 2 x 2 grid on the
-# right.
-plot_glm_all_and_usages <- function(data, usage_vector) {
-  p_all  <- make_all_use_plot(data)
-  p_uses <- map(usage_vector, ~ make_usage_plot(data, .x))
-  p_comb <- wrap_plots(p_uses, ncol = 2)
-  (p_all | p_comb) + plot_layout(widths = c(1.1, 1))
-}
-
-usages_to_plot <- c("Fisheries", "Aquaculture", "Aquarium", "Game fish")
-
-fig_out_glm <- plot_glm_all_and_usages(species_wide, usages_to_plot)
-
-# ------------------------------------------------------------------------------
-# Save
-# ------------------------------------------------------------------------------
-
-# ggsave(
-#   filename = "figures/fig2_clean.pdf",
-#   plot     = fig_out_glm,
-#   width    = 12,
-#   height   = 6.5,
-#   units    = "in",
-#   dpi      = 300
-# )
-
-# ------------------------------------------------------------------------------
-# Alternative model: GAMs
-# ------------------------------------------------------------------------------
-
-# A smooth term replaces the linear one, so the relationship is free to change
-# direction. This is the version reported in the paper.
-
-# ---- Label helpers: deviance explained and p-value of the smooth ----
-
-format_pval_label <- function(p, digits = 3, threshold = 0.001) {
-  # p can be 0 in mgcv summaries -> display as p < threshold
-  if (is.na(p)) return("p = NA")
-  if (p == 0 || p < threshold) {
-    return(paste0("p < ", format(threshold, scientific = FALSE)))
-  }
-  paste0("p = ", formatC(p, format = "f", digits = digits))
-}
-
-extract_gam_label <- function(gam_fit) {
-  s <- summary(gam_fit)
-
-  dev      <- s$dev.expl
-  p_smooth <- s$s.table[1, "p-value"]  # single smooth: s(Dist)
-
-  paste0(
-    "dev. expl. = ", sprintf("%.1f", 100 * dev), "%| ",
-    format_pval_label(p_smooth)
-  )
-}
-
-# Vertical position of the label, adjusted per panel so it never sits on the curve.
-label_y_by_use <- function(usage_name) {
-  if (usage_name == "All uses") return(0.80)   # top
-  if (usage_name == "Fisheries") return(0.15)  # bottom
-  return(0.83)                                 # unchanged for others
-}
-
-theme_no_axis_titles <- function() {
-  theme(
-    axis.title.x = element_blank(),
-    axis.title.y = element_blank()
-  )
-}
-
-# ---- Palette of the GAM panels (matches the other figures of the paper) ----
 custom_cols <- c(
   "All uses"    = "#A6C800",
   "Fisheries"   = "#5EB1BF",
@@ -386,185 +25,85 @@ custom_cols <- c(
   "Game fish"   = "#D496A7"
 )
 
-# ---- Global model: distinctiveness -> probability of being used (GAM) ----
-k_default <- 8   # upper bound on the flexibility of the smooth
+k_default <- 8
 
-species_dist_gam <- make_model_data(species_wide, "All uses")
+# --- Species tables -----------------------------------------------------------
+
+tab2 <- dist %>%
+  left_join(species_uses, by = "species") %>%
+  left_join(iucn %>% dplyr::select(species, IUCN), by = "species") %>%
+  mutate(`Non use` = if_else(Fisheries + Aquaculture + Aquarium + `Game fish` == 0, 1, 0))
+
+dist_long <- tab2 %>%
+  rename(Species = species) %>%
+  pivot_longer(c(Fisheries, Aquaculture, Aquarium, `Game fish`), names_to = "Use", values_to = "Use_presence") %>%
+  mutate(
+    Use          = if_else(`Non use` == 1 & Use == "Fisheries", "Non use", Use),
+    Use_presence = if_else(Use == "Non use", 1, Use_presence)
+  ) %>%
+  distinct(Species, Use, .keep_all = TRUE)
+
+species_wide <- tab2 %>%
+  rename(Species = species) %>%
+  mutate(`All uses` = as.numeric(Fisheries + Aquaculture + Aquarium + `Game fish` > 0))
+
+make_model_data <- function(data, usage_name) {
+  data %>% transmute(Species = Species, Dist = Dist, Used = as.numeric(.data[[usage_name]] == 1))
+}
+
+check_pool <- map(c("All uses", USAGE_COLS), ~ {
+  d <- make_model_data(species_wide, .x)
+  tibble(Usage = .x, n = nrow(d), n_used = sum(d$Used))
+}) %>%
+  list_rbind()
+
+print(check_pool)
+
+# --- Deciles ------------------------------------------------------------------
+
+df_dist     <- bootstrap_used_proportions_var(dist_long, var_name = "Dist")
+p_prop_dist <- plot_proportions_var(df_dist, dist_long, var_name = "Dist")
+
+dist_species <- get_used_species_var(dist_long, var_name = "Dist") %>%
+  assign_deciles_var(var_name = "Dist")
+
+global_p <- mean(dist_species$Used)
+
+decile_stats <- dist_species %>%
+  group_by(Decile) %>%
+  summarise(n_total = n(), n_used = sum(Used), prop = n_used / n_total, .groups = "drop") %>%
+  mutate(
+    prop_pct    = prop * 100,
+    p_value_raw = map2_dbl(n_used, n_total, ~ binom.test(.x, .y, p = global_p)$p.value),
+    ses         = (prop - global_p) / sqrt(global_p * (1 - global_p) / n_total),
+    p_value     = sprintf("%.3f", p_value_raw)
+  ) %>%
+  select(Decile, n_total, n_used, prop, prop_pct, ses, p_value)
+
+print(decile_stats)
+
+# --- GLM ----------------------------------------------------------------------
+
+glm_dist_use <- glm(Used ~ Dist, data = make_model_data(species_wide, "All uses"), family = binomial)
+summary(glm_dist_use)
+
+# --- GAM ----------------------------------------------------------------------
 
 gam_dist_use <- mgcv::gam(
   Used ~ s(Dist, k = k_default),
-  data   = species_dist_gam,
+  data   = make_model_data(species_wide, "All uses"),
   family = binomial(link = "logit"),
   method = "REML"
 )
 
-# ---- Diagnostics: check that k is large enough ----
 par(mfrow = c(2, 2))
-gam.check(gam_dist_use)
+mgcv::gam.check(gam_dist_use)
 par(mfrow = c(1, 1))
 
-label_stats_global <- extract_gam_label(gam_dist_use)
-
-p_dist_gam <- ggplot(species_dist_gam, aes(x = Dist, y = Used)) +
-  geom_jitter(
-    aes(color = Dist),
-    width = 0, height = 0.05, size = 2, alpha = 0.6
-  ) +
-  geom_smooth(
-    method      = "gam",
-    formula     = y ~ s(x, k = k_default),
-    method.args = list(
-      family = binomial(link = "logit"),
-      method = "REML"
-    ),
-    se        = TRUE,
-    color     = custom_cols[["All uses"]],
-    fill      = custom_cols[["All uses"]],
-    alpha     = 0.25,
-    linewidth = 1.2
-  ) +
-  scale_color_viridis_c(option = "D", begin = 0.85, end = 0.2,
-                        name = "Distinctiveness") +
-  scale_y_continuous("Probability of being used",
-                     limits = c(0, 1), breaks = seq(0, 1, 0.2)) +
-  scale_x_continuous("Morphological distinctiveness") +
-  annotate(
-    "text", x = Inf, y = 0.1, label = label_stats_global,
-    hjust = 1.05, vjust = -0.3, size = 4.2, color = "black"
-  ) +
-  theme_minimal(base_size = 12)
-
-p_dist_gam
-
-# ---- Models by usage category (GAM) ----
-make_usage_plot_gam <- function(data, usage_name, k = 8) {
-  data_use <- make_model_data(data, usage_name)
-
-  gam_fit <- mgcv::gam(
-    Used ~ s(Dist, k = k),
-    data   = data_use,
-    family = binomial(link = "logit"),
-    method = "REML"
-  )
-
-  label_stats <- extract_gam_label(gam_fit)
-  y_lab       <- label_y_by_use(usage_name)
-
-  ggplot(data_use, aes(x = Dist, y = Used)) +
-    geom_jitter(
-      width = 0, height = 0.05, size = 1.5, alpha = 0.6,
-      color = custom_cols[[usage_name]]
-    ) +
-    geom_smooth(
-      method      = "gam",
-      formula     = y ~ s(x, k = k),
-      method.args = list(
-        family = binomial(link = "logit"),
-        method = "REML"
-      ),
-      se        = TRUE,
-      linewidth = 1.1,
-      color     = custom_cols[[usage_name]],
-      fill      = custom_cols[[usage_name]],
-      alpha     = 0.25
-    ) +
-    scale_y_continuous(NULL, limits = c(0, 1)) +
-    scale_x_continuous(NULL) +
-    annotate(
-      "text", x = Inf, y = y_lab, label = label_stats,
-      hjust = 1.05, vjust = 1.1, size = 3, color = "black"
-    ) +
-    ggtitle(usage_name) +
-    theme_minimal(base_size = 12)
-}
-
-make_all_use_plot_gam <- function(data, k = 8) {
-  data_all <- make_model_data(data, "All uses")
-
-  gam_fit <- mgcv::gam(
-    Used ~ s(Dist, k = k),
-    data   = data_all,
-    family = binomial(link = "logit"),
-    method = "REML"
-  )
-
-  label_stats <- extract_gam_label(gam_fit)
-
-  ggplot(data_all, aes(x = Dist, y = Used)) +
-    geom_jitter(
-      width = 0, height = 0.05, size = 1.5, alpha = 0.6,
-      color = custom_cols[["All uses"]]
-    ) +
-    geom_smooth(
-      method      = "gam",
-      formula     = y ~ s(x, k = k),
-      method.args = list(
-        family = binomial(link = "logit"),
-        method = "REML"
-      ),
-      se        = TRUE,
-      color     = custom_cols[["All uses"]],
-      fill      = custom_cols[["All uses"]],
-      alpha     = 0.25,
-      linewidth = 1.2
-    ) +
-    scale_y_continuous("Probability of being used", limits = c(0, 1)) +
-    scale_x_continuous("Morphological distinctiveness") +
-    annotate(
-      "text", x = Inf, y = 0.95, label = label_stats,
-      hjust = 1.05, vjust = 1.1, size = 4.2, color = "black"
-    ) +
-    ggtitle("All uses") +
-    theme_minimal(base_size = 12)
-}
-
-# ------------------------------------------------------------------------------
-# Combine panels (GAM)
-# ------------------------------------------------------------------------------
-
-plot_gam_all_and_usages <- function(data, usage_vector, k = 8) {
-  p_all  <- make_all_use_plot_gam(data, k = k)
-  p_uses <- map(usage_vector, ~ make_usage_plot_gam(data, .x, k = k))
-  p_comb <- wrap_plots(p_uses, ncol = 2)
-  (p_all | p_comb) + plot_layout(widths = c(1.1, 1))
-}
-
-# Panel order used in the published figure.
-usages_to_plot <- c("Fisheries", "Aquarium", "Aquaculture", "Game fish")
-
-fig_out <- plot_gam_all_and_usages(species_wide, usages_to_plot, k = k_default)
-fig_out
-
-out_pdf <- "figures/Clean/fig2bis_clean.pdf"
-out_png <- "figures/Clean/fig2bis_clean.png"
-
-# ggsave(
-#   filename = out_png,
-#   plot     = fig_out,
-#   width    = 11.69,
-#   height   = 8.27,
-#   units    = "in",
-#   dpi      = 300,
-#   bg       = "white"
-# )
-
-# ------------------------------------------------------------------------------
-# GAM summary table (All uses + each usage)
-# ------------------------------------------------------------------------------
-
-# ---- Fit one model and return its statistics as a single row ----
 fit_gam_extract <- function(data, usage_name, k = 8) {
   df_species <- make_model_data(data, usage_name)
-
-  gam_fit <- mgcv::gam(
-    Used ~ s(Dist, k = k),
-    data   = df_species,
-    family = binomial(link = "logit"),
-    method = "REML"
-  )
-
+  gam_fit <- mgcv::gam(Used ~ s(Dist, k = k), data = df_species, family = binomial(link = "logit"), method = "REML")
   s <- summary(gam_fit)
-
   tibble(
     Usage    = usage_name,
     n        = s$n,
@@ -577,24 +116,135 @@ fit_gam_extract <- function(data, usage_name, k = 8) {
   )
 }
 
-# ---- Build the table ----
-usages_to_summarise <- USAGE_COLS
-
-# Raw values, unrounded and unformatted: this is what goes to the editor.
 tab_gam_raw <- bind_rows(
-  fit_gam_extract(species_wide, usage_name = "All uses", k = k_default),
-  map_dfr(usages_to_summarise, ~ fit_gam_extract(species_wide, .x, k = k_default))
+  fit_gam_extract(species_wide, "All uses", k = k_default),
+  map_dfr(USAGE_COLS, ~ fit_gam_extract(species_wide, .x, k = k_default))
 )
 
 print(tab_gam_raw, n = Inf, width = Inf)
 
-# Rounded version for display.
 tab_gam <- tab_gam_raw %>%
-  mutate(
-    edf      = round(edf, 3),
-    ref_df   = round(ref_df, 3),
-    Chi.sq   = round(Chi.sq, 1),
-    dev_expl = round(dev_expl, 2)
-  )
+  mutate(edf = round(edf, 3), ref_df = round(ref_df, 3), Chi.sq = round(Chi.sq, 1), dev_expl = round(dev_expl, 2))
 
-tab_gam
+print(tab_gam)
+
+# --- Figure 3 -----------------------------------------------------------------
+
+format_pval_label <- function(p, digits = 3, threshold = 0.001) {
+  if (is.na(p)) return("P = NA")
+  if (p == 0 || p < threshold) return(paste0("P < ", format(threshold, scientific = FALSE)))
+  paste0("P = ", formatC(p, format = "f", digits = digits))
+}
+
+extract_gam_label <- function(gam_fit, p_label = NA) {
+  s <- summary(gam_fit)
+  if (is.na(p_label)) p_label <- format_pval_label(s$s.table[1, "p-value"])
+  paste0("dev. expl. = ", sprintf("%.1f", 100 * s$dev.expl), "%; ", p_label)
+}
+
+p_label_override <- c("Fisheries" = "P = 0.005")
+
+fig_width  <- 250 / 72
+fig_height <- 177 / 72
+fig_scale  <- fig_width / 11.69
+
+fig_title_size <- 5
+fig_label_size <- c(main = 5, use = 3.7)
+
+jitter_seed <- 42
+
+mm_to_linewidth <- function(mm) mm / 25.4 * 96 / .pt
+
+theme_fig3 <- function() {
+  half_line <- 12 * fig_scale / 2
+  theme_minimal(base_size = 12 * fig_scale, base_family = fig_font) +
+    theme(
+      plot.margin     = margin(0.58, half_line, half_line, half_line),
+      plot.title      = element_text(size = fig_title_size, face = "bold", hjust = 0, margin = margin(b = 2.3, l = -7)),
+      axis.title      = element_text(size = fig_title_size),
+      axis.line       = element_line(colour = "black", linewidth = mm_to_linewidth(0.2)),
+      plot.background = element_blank()
+    )
+}
+
+theme_fig3_page <- function() {
+  m <- 5.5 * fig_scale
+  theme(plot.margin = margin(m, m, m, m), plot.background = element_rect(fill = "white", colour = NA))
+}
+
+gam_panel <- function(data_use, usage_name, k, linewidth) {
+  ggplot(data_use, aes(x = Dist, y = Used)) +
+    geom_point(
+      position = position_jitter(width = 0, height = 0.05, seed = jitter_seed),
+      size = 1.5 * fig_scale, stroke = 0.5 * fig_scale, alpha = 0.6,
+      color = custom_cols[[usage_name]]
+    ) +
+    geom_smooth(
+      method      = "gam",
+      formula     = y ~ s(x, k = k),
+      method.args = list(family = binomial(link = "logit"), method = "REML"),
+      se          = TRUE,
+      color       = custom_cols[[usage_name]],
+      fill        = custom_cols[[usage_name]],
+      alpha       = 0.25,
+      linewidth   = linewidth * fig_scale
+    )
+}
+
+gam_label <- function(data_use, usage_name, k, size) {
+  gam_fit   <- mgcv::gam(Used ~ s(Dist, k = k), data = data_use, family = binomial(link = "logit"), method = "REML")
+  label_pos <- fig3_label_pos[[usage_name]]
+  annotate(
+    "text", x = I(label_pos[["x"]]), y = I(label_pos[["y"]]),
+    label = extract_gam_label(gam_fit, unname(p_label_override[usage_name])),
+    hjust = 0, vjust = 0, size = size / .pt, family = fig_font, color = "black"
+  )
+}
+
+make_usage_plot_gam <- function(data, usage_name, tag, k = 8) {
+  data_use <- make_model_data(data, usage_name)
+  gam_panel(data_use, usage_name, k, linewidth = 1.1) +
+    scale_y_continuous(NULL, limits = c(0, 1)) +
+    scale_x_continuous(NULL) +
+    gam_label(data_use, usage_name, k, fig_label_size[["use"]]) +
+    coord_cartesian(clip = "off") +
+    ggtitle(paste(tag, usage_name)) +
+    theme_fig3()
+}
+
+make_all_use_plot_gam <- function(data, tag = "a", k = 8) {
+  data_all <- make_model_data(data, "All uses")
+  gam_panel(data_all, "All uses", k, linewidth = 1.2) +
+    scale_y_continuous("Probability of being used", limits = c(0, 1)) +
+    scale_x_continuous("Morphological distinctiveness") +
+    gam_label(data_all, "All uses", k, fig_label_size[["main"]]) +
+    coord_cartesian(clip = "off") +
+    ggtitle(paste(tag, "All uses")) +
+    theme_fig3() +
+    theme(
+      plot.margin  = margin(0.58, 12 * fig_scale / 2, 12 * fig_scale / 2, 0),
+      axis.title.x = element_text(hjust = 0.656, margin = margin(t = 1.11, b = -1.68)),
+      axis.title.y = element_text(hjust = 0.505, margin = margin(r = 1.57))
+    )
+}
+
+p_all  <- make_all_use_plot_gam(species_wide, tag = "a", k = k_default)
+p_uses <- map2(usages_to_plot, letters[seq_along(usages_to_plot) + 1],
+               ~ make_usage_plot_gam(species_wide, .x, tag = .y, k = k_default))
+
+fig_out <- (p_all | wrap_plots(p_uses, ncol = 2)) +
+  plot_layout(widths = c(1.1, 1)) +
+  plot_annotation(theme = theme_fig3_page())
+
+print(fig_out)
+
+# --- Save ---------------------------------------------------------------------
+
+dir.create("figures", showWarnings = FALSE)
+
+ggsave("figures/fig3.pdf", fig_out, device = cairo_pdf, width = fig_width, height = fig_height, units = "in")
+ggsave("figures/fig3.png", fig_out, width = fig_width, height = fig_height, units = "in", dpi = 600, bg = "white")
+
+# --- Session ------------------------------------------------------------------
+
+sessionInfo()

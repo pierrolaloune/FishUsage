@@ -1,48 +1,79 @@
-# ------------------------------------------------------------------------------
-# Script : 000_library
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 000_library --------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+# --- Packages -----------------------------------------------------------------
 
-# This script declares every R package used across the project, installs those
-# that are missing from the local library, and loads them all.
-#
-# Run it first, at the start of every session, before any other script.
+required_packages <- c(
+  "ape",
+  "phytools",
+  "data.table",
+  "TPD",
+  "ks",
+  "funspace",
+  "funrar",
+  "mgcv",
+  "missForest",
+  "vegan",
+  "doParallel",
+  "paran",
+  "mvtnorm",
+  "rvest",
+  "xml2",
+  "rfishbase",
+  "taxize",
+  "future",
+  "furrr",
+  "progressr",
+  "scico",
+  "fields",
+  "rphylopic",
+  "grImport2",
+  "ragg",
+  "png",
+  "scales",
+  "patchwork",
+  "ggplot2",
+  "readr",
+  "stringr",
+  "tibble",
+  "purrr",
+  "tidyr",
+  "dplyr"
+)
 
-# ------------------------------------------------------------------------------
-# Required packages
-# ------------------------------------------------------------------------------
+# --- Installation -------------------------------------------------------------
 
-required_packages <- unique(c(
-  "ade4", "ape", "berryFunctions", "betapart", "biscale", "cowplot",
-  "data.table", "dplyr", "funrar", "geiger", "ggplot2", "ggpubr",
-  "lsmeans", "missForest", "motmot", "multcomp", "mvMORPH", "paleotree",
-  "pals", "paran", "phytools", "picante", "plotly",
-  "plotrix", "psych", "quanteda", "ratematrix", "RColorBrewer",
-  "readr", "rgbif", "rnaturalearth", "rredlist", "sf", "shape",
-  "stats", "tidyr", "TPD", "vegan", "VennDiagram", "viridis",
-  "wesanderson", "rvest", "xml2", "stringr", "purrr", "glue",
-  "furrr", "future", "progressr", "funspace", "forcats", "ggeffects",
-  "patchwork", "performance", "scico", "fields", "rfishbase",
-  "pbapply", "ggrepel", "AICcmodavg", "lme4", "DHARMa", "missRanger",
-  "paletteer", "naniar", "mice", "VIM", "visdat", "broom", "knitr", "mgcv",
-  "emayili", "taxize"
-))
-
-# ------------------------------------------------------------------------------
-# Install and load
-# ------------------------------------------------------------------------------
-
-# ---- Install the packages that are not yet available locally ----
-# The first run can take a long time; later runs skip this step entirely.
-missing_packages <- required_packages[!(required_packages %in% rownames(installed.packages()))]
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
 
 if (length(missing_packages) > 0L) {
-  install.packages(missing_packages)
+  message("Installing: ", paste(missing_packages, collapse = ", "))
+  tryCatch(
+    install.packages(
+      missing_packages,
+      repos        = "https://cloud.r-project.org",
+      type         = if (.Platform$OS.type == "windows") "binary" else getOption("pkgType"),
+      dependencies = TRUE
+    ),
+    error = function(e) message("Installation failed: ", conditionMessage(e))
+  )
 }
 
-# ---- Load every package ----
-invisible(lapply(required_packages, library, character.only = TRUE))
+# --- Loading ------------------------------------------------------------------
+
+load_errors <- list()
+
+for (pkg in required_packages) {
+  tryCatch(
+    suppressPackageStartupMessages(library(pkg, character.only = TRUE)),
+    error = function(e) load_errors[[pkg]] <<- conditionMessage(e)
+  )
+}
+
+if (length(load_errors) > 0L) {
+  warning(
+    "Packages not loaded (scripts using them will fail):\n",
+    paste0("  - ", names(load_errors), ": ", unlist(load_errors), collapse = "\n"),
+    call. = FALSE, immediate. = TRUE
+  )
+}

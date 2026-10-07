@@ -1,67 +1,33 @@
-# ------------------------------------------------------------------------------
-# Script : 07_imputation_error
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 07_imputation_error ------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+source("script/000_library.R")
+source("script/000_functions.R")
 
-# This script loads raw (missing) and imputed trait tables, the PCA/use object,
-# scaling parameters, and a phylogeny. It then evaluates phylogeny-informed
-# missForest imputation error using bootstrap masking simulations, summarizing
-# NRMSE across iterations and saving/loading the resulting output object.
-#
-# Principle: species with complete traits are masked using a real missingness
-# pattern, re-imputed, and projected back into the reference PCA. The distance
-# between the projected and the true position gives the error, expressed as a
-# percentage of the range of each axis.
-#
-# The evaluation itself is commented out; its result is stored in output/ and
-# reloaded at the end, so the script runs end to end as it is.
+# --- Data ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Data import
-# ------------------------------------------------------------------------------
-
-# ---- Inputs ----
-traitsData <- read.table("dataPrepared/Fish/TraitFishMissing.txt") %>%
-  dplyr::select(-IUCN)
-
-traitsDataImputed <- read.table("dataPrepared/Fish/TraitFishImputed.txt") %>%
-  dplyr::select(-IUCN)
-
-selectedTraits <- colnames(traitsDataImputed)
+traitsData        <- read.table("dataPrepared/Fish/TraitFishMissing.txt") %>% dplyr::select(-IUCN)
+traitsDataImputed <- read.table("dataPrepared/Fish/TraitFishImputed.txt") %>% dplyr::select(-IUCN)
+selectedTraits    <- colnames(traitsDataImputed)
 
 pca_trait <- readRDS("output/pca_trait.rds")
 PCAmodel  <- pca_trait$pca_object
 traitPCA  <- pca_trait$traits_scores[, 1:4]
 
-# ---- Centring and scaling used by the reference PCA ----
 meanInputed <- attr(pca_trait$traits_scaled, "scaled:center")
 sdInputed   <- attr(pca_trait$traits_scaled, "scaled:scale")
 
-phylogeny <- readRDS("dataOriginal/FishMORPH_Phylogeny.rds")
+phylogeny <- readRDS("dataPrepared/Fish/FishMORPH_Phylogeny.rds")
 
-# ------------------------------------------------------------------------------
-# Imputation error settings
-# ------------------------------------------------------------------------------
-
-nboot_val   <- 100    # number of bootstrap iterations
-perc_val    <- 0.1    # proportion of species masked each iteration
-npcoa_val   <- 2      # number of phylogenetic PCoA axes
+nboot_val   <- 100
+perc_val    <- 0.1
+npcoa_val   <- 2
 seed_val    <- 123
-ref_max_val <- 1000   # maximum complete species used as reference
-ntree_val   <- 30     # trees per random forest
-maxiter_val <- 2      # missForest iterations
+ref_max_val <- 1000
+ntree_val   <- 30
+maxiter_val <- 2
 
-# ------------------------------------------------------------------------------
-# Run imputation error model  [LONG]
-# ------------------------------------------------------------------------------
+# --- Imputation error [LONG] --------------------------------------------------
 
-# LONG: one full missForest run per bootstrap iteration (100 by default).
-
-# cat("\n=== STARTING PHYLOGENETIC IMPUTATION ERROR ===\n")
 # set.seed(seed_val)
 #
 # res <- evaluate_imputation_phylo(
@@ -77,22 +43,19 @@ maxiter_val <- 2      # missForest iterations
 #   percImpute        = perc_val,
 #   nboot             = nboot_val,
 #   npcoa             = npcoa_val,
-#   ncores            = 1,              # force sequential mode
+#   ncores            = 1,
 #   ref_complete_max  = ref_max_val,
 #   ntree             = ntree_val,
 #   maxiter           = maxiter_val,
 #   seed              = seed_val
 # )
 #
-# cat("\n=== ANALYSIS COMPLETE ===\n")
-# print(res$summary)
-#
 # saveRDS(res, "output/NRMSE_results.rds")
 
-# ------------------------------------------------------------------------------
-# Results
-# ------------------------------------------------------------------------------
-
-# ---- Recommended: load the saved result ----
 NMRSE_results <- readRDS("output/NRMSE_results.rds")
 NMRSE_summary <- NMRSE_results$summary
+print(NMRSE_summary)
+
+# --- Session ------------------------------------------------------------------
+
+sessionInfo()

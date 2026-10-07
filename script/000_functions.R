@@ -1,36 +1,7 @@
-# ------------------------------------------------------------------------------
-# Script  : 000_functions
-# Authors : A. Toussaint, P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 000_functions ------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+# --- TPD ----------------------------------------------------------------------
 
-# This script defines every custom function used in the project. It contains no
-# analysis of its own: it only has to be sourced once per session, after
-# 000_library.R and before any numbered script.
-#
-# The functions are grouped as follows:
-#   1. Trait probability densities (TPD) for large datasets
-#   2. PCA + TPD wrapper
-#   3. FishBase scraping and classification of human uses
-#   4. Functional diversity metrics (TPDc, FRic, dissimilarity)
-#   5. Null models for functional richness
-#   6. Standardized effect sizes (SES)
-#   7. Shifts in functional space
-#   8. Functional uniqueness and distinctiveness
-#   9. GLM models (threatened status ~ trait / use)
-#  10. Imputation error evaluation
-
-# ------------------------------------------------------------------------------
-# 1. Trait probability densities (TPD)
-# ------------------------------------------------------------------------------
-
-# Memory-efficient version of TPD::TPDsMean. Instead of storing a full density
-# value for every cell of the evaluation grid, only the non-zero cells are kept
-# (index + probability), which makes the function usable on thousands of species.
-# Returns an object of class "TPDsp".
 TPDsMean_large <- function(species, means, sds, alpha = 0.95, samples = NULL,
                            trait_ranges = NULL, n_divisions = NULL, tolerance = 0.05) {
   means <- as.matrix(means)
@@ -161,13 +132,8 @@ TPDsMean_large <- function(species, means, sds, alpha = 0.95, samples = NULL,
   return(results)
 }
 
-# ------------------------------------------------------------------------------
-# 2. PCA + TPD wrapper
-# ------------------------------------------------------------------------------
+# --- PCA + TPD ----------------------------------------------------------------
 
-# Scales the trait table, chooses the number of PCA axes to keep (parallel
-# analysis via 'paran', unless 'dimensions' is given), runs the PCA and derives
-# the species TPDs in that space. Returns a list with the PCA and the TPDs.
 computePCAandTPDs <- function(traits_data,
                               dimensions = NULL,
                               alpha = 0.95,
@@ -225,20 +191,14 @@ computePCAandTPDs <- function(traits_data,
   return(output)
 }
 
-# ------------------------------------------------------------------------------
-# 3. FishBase scraping and classification of human uses
-# ------------------------------------------------------------------------------
+# --- Scraping -----------------------------------------------------------------
 
-# Builds the FishBase summary page URL for one species name.
 make_fishbase_url <- function(species) {
   base_url <- "https://www.fishbase.se/summary/"
   species_url <- str_replace_all(tolower(species), " ", "-")
   glue("{base_url}{species_url}.html")
 }
 
-# Reads one FishBase page and returns the raw "Human uses" text.
-# A random 5-8 s pause is applied before each request to stay polite with the
-# server: this is what makes the full scraping run take hours.
 extract_human_uses <- function(url) {
   Sys.sleep(runif(1, 5, 8))
   page <- tryCatch(read_html(url), error = function(e) NULL)
@@ -263,10 +223,6 @@ extract_human_uses <- function(url) {
   tibble(species_url = url, human_uses = human_uses_text)
 }
 
-# Turns the free "Human uses" text into one intensity level per use category,
-# among "none", "rare", "regular" and "highly". Each category has its own set of
-# rules: an explicit "category: value" match first, then a looser keyword match
-# guarded against the other categories.
 classify_uses_precise <- function(text) {
   if (is.na(text) || text == "" || str_detect(text, fixed("Classification"))) {
     return(tibble(
@@ -343,13 +299,8 @@ classify_uses_precise <- function(text) {
   )
 }
 
-# ------------------------------------------------------------------------------
-# 4. Functional diversity metrics (TPDc, FRic, dissimilarity)
-# ------------------------------------------------------------------------------
+# --- Functional diversity -----------------------------------------------------
 
-# Memory-efficient version of TPD::TPDc. Aggregates the species TPDs into one
-# community TPD per sampling unit (here, per human use), weighting each species
-# by its relative abundance in that unit. Returns an object of class "TPDcomm".
 TPDc_large <- function(TPDs, sampUnit) {
   sampUnit <- as.matrix(sampUnit)
   if (is.null(colnames(sampUnit)) | any(is.na(colnames(sampUnit)))) {
@@ -433,9 +384,6 @@ TPDc_large <- function(TPDs, sampUnit) {
   return(results)
 }
 
-# Functional richness: the volume of trait space occupied, i.e. the number of
-# occupied grid cells multiplied by the volume of one cell. Accepts either a
-# community ("TPDcomm") or a species ("TPDsp") object.
 Calc_FRich <- function(TPDc_Fish) {
   results_FR <- numeric()
   if (class(TPDc_Fish) == "TPDcomm") {
@@ -457,9 +405,6 @@ Calc_FRich <- function(TPDc_Fish) {
   return(results_FR)
 }
 
-# Pairwise TPD-based dissimilarity, decomposed into a shared component
-# (P_shared) and a non-shared component (P_non_shared).
-# LONG: the runtime grows with the square of the number of communities.
 dissim_large <- function(x = NULL) {
   if (class(x) == "TPDcomm") {
     TPDType <- "Communities"
@@ -541,12 +486,8 @@ dissim_large <- function(x = NULL) {
   return(results)
 }
 
-# ------------------------------------------------------------------------------
-# 5. Null models for functional richness
-# ------------------------------------------------------------------------------
+# --- Null models --------------------------------------------------------------
 
-# Shuffles the species labels within each row of the community matrix. Row totals
-# (the number of species per use) are preserved, species identity is not.
 randomize_matrix <- function(original_matrix) {
   randomized <- t(apply(original_matrix, 1, function(row) sample(row)))
   colnames(randomized) <- colnames(original_matrix)
@@ -554,9 +495,6 @@ randomize_matrix <- function(original_matrix) {
   return(randomized)
 }
 
-# Null distribution of FRic: repeats the randomization above 'n_iter' times and
-# recomputes FRic each time. Returns a long data frame (iteration, usage, FRic).
-# LONG: one TPDc + FRic computation per iteration.
 simulate_FRic_null <- function(n_iter, original_matrix, TPDs_object) {
   fric_simulations <- matrix(NA, nrow = n_iter, ncol = nrow(original_matrix))
   colnames(fric_simulations) <- rownames(original_matrix)
@@ -579,11 +517,6 @@ simulate_FRic_null <- function(n_iter, original_matrix, TPDs_object) {
   return(fric_df_long)
 }
 
-# For every combination of human use x threat category: removes the threatened
-# species of that use and measures the observed FRic, then builds a null
-# distribution by removing the same number of species drawn at random from the
-# same threat category.
-# LONG: nrep TPDc computations per usage x category combination.
 calc_FRic_by_threat <- function(MatriceFish, TPDsp, threatsp, nrep = 999) {
   usages <- rownames(MatriceFish)
   threat_categories <- names(threatsp)
@@ -643,13 +576,8 @@ calc_FRic_by_threat <- function(MatriceFish, TPDsp, threatsp, nrep = 999) {
   return(do.call(rbind, results_list))
 }
 
-# ------------------------------------------------------------------------------
-# 6. Standardized effect sizes (SES)
-# ------------------------------------------------------------------------------
+# --- SES ----------------------------------------------------------------------
 
-# Compares one observed value with its null distribution and returns the
-# observed value, the SES, the mean and confidence interval of the null
-# distribution, an empirical p-value and the number of replicates.
 sesandpvalue <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 3) {
   if (length(rand) < 2 || all(rand == rand[1])) {
     SES <- NA
@@ -665,8 +593,6 @@ sesandpvalue <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 3) {
   return(results)
 }
 
-# Applies sesandpvalue() to every human use: one row of observed FRic against
-# the matching simulated values.
 get_SES <- function(obs_df, sim_df, probs = c(0.025, 0.975), rnd = 6) {
   results_list <- lapply(seq_len(nrow(obs_df)), function(i) {
     usage_i <- obs_df$Use[i]
@@ -680,8 +606,6 @@ get_SES <- function(obs_df, sim_df, probs = c(0.025, 0.975), rnd = 6) {
   return(results_df)
 }
 
-# One histogram of simulated FRic per human use, with the observed value drawn
-# as a red vertical line.
 plot_SES_histograms <- function(sim_df, obs_df) {
   library(ggplot2)
   library(dplyr)
@@ -703,9 +627,6 @@ plot_SES_histograms <- function(sim_df, obs_df) {
   print(p)
 }
 
-# Null distribution of the mean position in PCA space: for each use, the observed
-# centroid is compared with centroids obtained from randomized use assignments.
-# LONG: nb_simulations randomizations per human use.
 generate_null_means <- function(pca_trait, MatriceFish, nb_simulations = 999) {
   pca_axes <- grep("^Comp\\.", colnames(pca_trait$traits_scores), value = TRUE)
   common_species <- intersect(rownames(pca_trait$traits_scores), colnames(MatriceFish))
@@ -750,8 +671,6 @@ generate_null_means <- function(pca_trait, MatriceFish, nb_simulations = 999) {
   return(result_list)
 }
 
-# Turns the output of generate_null_means() into a flat SES table, one row per
-# use x PCA axis.
 get_SES_from_PCA_results <- function(results_list, probs = c(0.025, 0.975), rnd = 4) {
   output <- list()
   for (usage in names(results_list)) {
@@ -777,8 +696,6 @@ get_SES_from_PCA_results <- function(results_list, probs = c(0.025, 0.975), rnd 
   return(df_out)
 }
 
-# SES table for the threat-based null model: the observed value and its null
-# replicates are stored side by side in the same row (wide format).
 calc_SES_table <- function(df, obs_col = "FRic_obs", null_prefix = "FRic_null_") {
   null_cols <- grep(paste0("^", null_prefix), names(df), value = TRUE)
   sesandpvalue_local <- function(obs, rand, nreps, probs = c(0.025, 0.975), rnd = 4) {
@@ -806,13 +723,8 @@ calc_SES_table <- function(df, obs_col = "FRic_obs", null_prefix = "FRic_null_")
   return(res_SES)
 }
 
-# ------------------------------------------------------------------------------
-# 7. Shifts in functional space
-# ------------------------------------------------------------------------------
+# --- Functional shifts --------------------------------------------------------
 
-# Converts each community TPD into a map of cumulative percentiles over the 2D
-# evaluation grid. Cells above 'thresholdPlot' are set to NA, which is what
-# defines the visible core of the functional space.
 imageTPD <- function(x, thresholdPlot = 0.99) {
   TPDList <- x$TPDc$TPDc
   imageTPD <- list()
@@ -856,15 +768,9 @@ imageTPD <- function(x, thresholdPlot = 0.99) {
   return(imageMat)
 }
 
-# Draws, for one human use, the shift in functional space caused by the loss of
-# threatened species: the difference map between the use with and without its
-# threatened species, plus the area lost entirely (in black). Writes a JPEG.
-#
-# Expects these objects in the global environment: pca_trait, IUCN, TPDs_fish,
-# limX, limY (all defined in 06_Shift_FS.R).
-plot_functional_shift_by_usage <- function(usage_name, save_path = "figures/") {
+draw_functional_shift <- function(usage_name, pca_trait, IUCN, TPDs_fish,
+                                  limX = c(-7, 7), limY = c(-7, 7)) {
 
-  message(glue::glue("Processing usage: {usage_name}"))
   traits_use  <- pca_trait$uses
   species_all <- rownames(traits_use)
   threat_vec  <- IUCN$IUCN %in% c("CR", "EN", "VU", "NT")
@@ -878,24 +784,21 @@ plot_functional_shift_by_usage <- function(usage_name, save_path = "figures/") {
   comm["ALL", ] <- 1
   comm["Usage", used_vec] <- 1
   comm["Usagewithoutthreatened", used_vec & !threat_vec] <- 1
-  TPDc_use <- TPDc(TPDs = TPDs_fish, sampUnit = comm)
+  TPDc_use <- TPD::TPDc(TPDs = TPDs_fish, sampUnit = comm)
 
   comp1 <- unique(TPDc_use$data$evaluation_grid[, 1])
   comp2 <- unique(TPDc_use$data$evaluation_grid[, 2])
 
-  mat_usage     <- imageTPD(TPDc_use, thresholdPlot = 0.99)[, , "Usage"]
-  mat_no_threat <- imageTPD(TPDc_use, thresholdPlot = 0.99)[, , "Usagewithoutthreatened"]
+  img_99 <- imageTPD(TPDc_use, thresholdPlot = 0.99)
+  mat_usage     <- img_99[, , "Usage"]
+  mat_no_threat <- img_99[, , "Usagewithoutthreatened"]
   mat_diff <- mat_usage - mat_no_threat
 
   mat_lost <- mat_usage
   mat_lost[!is.na(mat_usage) & !is.na(mat_no_threat)] <- NA
   mat_lost[!is.na(mat_usage) & is.na(mat_no_threat)]  <- 1
 
-  mat_usage_full     <- imageTPD(TPDc_use, thresholdPlot = 1)[, , "Usage"]
-  mat_no_threat_full <- imageTPD(TPDc_use, thresholdPlot = 1)[, , "Usagewithoutthreatened"]
-
-  ncol <- 1000
-  ColorRamp <- rev(scico(n = ncol, palette = "vik"))
+  ColorRamp <- rev(scico::scico(n = 1000, palette = "vik"))
   Min    <- -0.36
   Max    <- 0.29
   Thresh <- 0
@@ -909,18 +812,9 @@ plot_functional_shift_by_usage <- function(usage_name, save_path = "figures/") {
   )
 
   cont_funspace <- contourLines(
-    x = unique(TPDc_use$data$evaluation_grid[, 1]),
-    y = unique(TPDc_use$data$evaluation_grid[, 2]),
+    x = comp1, y = comp2,
     z = imageTPD(TPDc_use, thresholdPlot = 1)[, , "ALL"],
     levels = 0.999
-  )
-
-  cont1 <- contourLines(x = comp1, y = comp2, z = mat_usage_full,     levels = c(0.99))
-  cont2 <- contourLines(x = comp1, y = comp2, z = mat_no_threat_full, levels = c(0.99))
-
-  jpeg(
-    filename = glue::glue("{save_path}/FS_shift_{gsub(' ', '_', usage_name)}.jpg"),
-    width = 2000, height = 1600, res = 300
   )
 
   image(
@@ -940,16 +834,33 @@ plot_functional_shift_by_usage <- function(usage_name, save_path = "figures/") {
   for (cont in cont_funspace) {
     lines(cont$x, cont$y, lwd = 0.8, lty = 1, col = "grey30")
   }
-
-  dev.off()
 }
 
-# ------------------------------------------------------------------------------
-# 8. Functional uniqueness and distinctiveness
-# ------------------------------------------------------------------------------
+draw_shift_legend <- function() {
+  Min    <- -0.3
+  Max    <- 0.3
+  Thresh <- 0
+  nHalf  <- 500
 
-# Splits a continuous variable (uniqueness Ui or distinctiveness Dist) into ten
-# deciles labelled D1 to D10.
+  ColorRamp <- rev(scico::scico(n = 1000, palette = "vik"))
+  rc1 <- colorRampPalette(ColorRamp[1:nHalf], space = "Lab")(nHalf)
+  rc2 <- colorRampPalette(ColorRamp[(nHalf + 1):1000], space = "Lab")(nHalf)
+  rampbreaks <- c(
+    seq(Min, Thresh, length.out = nHalf + 1),
+    seq(Thresh, Max, length.out = nHalf + 1)[-1]
+  )
+
+  par(mar = c(4, 5, 2, 2))
+  fields::image.plot(
+    zlim = c(Min, Max), legend.only = TRUE,
+    col = c(rc1, rc2), breaks = rampbreaks,
+    horizontal = FALSE, legend.width = 1.2, legend.mar = 4,
+    axis.args = list(at = seq(-0.3, 0.3, by = 0.1), labels = paste0(seq(-30, 30, by = 10), "%"))
+  )
+}
+
+# --- Distinctiveness ----------------------------------------------------------
+
 assign_deciles_var <- function(data, var_name = "Ui") {
   cuts <- quantile(data[[var_name]], probs = seq(0, 1, by = 0.1), na.rm = TRUE)
   levels <- paste0("D", 1:10)
@@ -962,8 +873,6 @@ assign_deciles_var <- function(data, var_name = "Ui") {
     ))
 }
 
-# Collapses the long table to one row per species, with a single TRUE/FALSE flag
-# stating whether that species is used by at least one human activity.
 get_used_species_var <- function(data, var_name = "Ui") {
   data %>%
     group_by(Species) %>%
@@ -974,7 +883,6 @@ get_used_species_var <- function(data, var_name = "Ui") {
     )
 }
 
-# Proportion of used species within each decile.
 compute_used_proportion_var <- function(species_data, var_name = "Ui") {
   species_data %>%
     assign_deciles_var(var_name = var_name) %>%
@@ -986,9 +894,6 @@ compute_used_proportion_var <- function(species_data, var_name = "Ui") {
     )
 }
 
-# Confidence intervals around those proportions, obtained by resampling a
-# fraction of the species 'n_iter' times. Set return_all = TRUE to get every
-# replicate instead of the summary.
 bootstrap_used_proportions_var <- function(data, var_name = "Ui",
                                            n_iter = 999, prop_sample = 0.8,
                                            return_all = FALSE) {
@@ -1013,7 +918,6 @@ bootstrap_used_proportions_var <- function(data, var_name = "Ui",
     )
 }
 
-# Axis labels showing the value range covered by each decile, e.g. "D1 (0.02-0.11)".
 make_decile_labels_var <- function(data, var_name = "Ui") {
   cuts <- quantile(data[[var_name]], probs = seq(0, 1, by = 0.1), na.rm = TRUE)
   labels <- paste0(
@@ -1025,8 +929,6 @@ make_decile_labels_var <- function(data, var_name = "Ui") {
   labels
 }
 
-# Percentage of used species per decile, with bootstrap confidence intervals and
-# a dashed line marking the overall proportion.
 plot_proportions_var <- function(summary_df, original_data, var_name = "Ui") {
   labels <- make_decile_labels_var(original_data, var_name)
   overall <- original_data %>%
@@ -1053,258 +955,8 @@ plot_proportions_var <- function(summary_df, original_data, var_name = "Ui") {
     )
 }
 
-# Runs the full test battery on the decile proportions: each decile against the
-# overall mean (Wilcoxon), then all deciles against each other (Kruskal-Wallis
-# followed by pairwise Wilcoxon with BH correction).
-run_statistical_tests <- function(data_long, var_name = "Ui") {
-  species_unique <- get_used_species_var(data_long, var_name)
-  mu <- mean(species_unique$Used)
-  resamples_df <- bootstrap_used_proportions_var(data_long, var_name = var_name, return_all = TRUE)
+# --- Imputation error ---------------------------------------------------------
 
-  wilcox_decile_vs_mu <- resamples_df %>%
-    group_by(Decile) %>%
-    summarise(
-      p_value = wilcox.test(Used_Prop, mu = mu)$p.value,
-      median  = median(Used_Prop),
-      .groups = "drop"
-    )
-  print(wilcox_decile_vs_mu)
-
-  kr <- kruskal.test(Used_Prop ~ Decile, data = resamples_df)
-  pw <- pairwise.wilcox.test(resamples_df$Used_Prop, resamples_df$Decile, p.adjust.method = "BH")
-  message(sprintf("Kruskal-Wallis p = %.4f", kr$p.value))
-  print(pw)
-
-  summary_df <- bootstrap_used_proportions_var(data_long, var_name = var_name)
-  pvals <- resamples_df %>%
-    group_by(Decile) %>%
-    summarise(
-      p_value = wilcox.test(Used_Prop, mu = mu)$p.value,
-      .groups = "drop"
-    )
-
-  summary_df <- summary_df %>%
-    left_join(pvals, by = "Decile")
-  print(summary_df)
-
-  list(
-    wilcox_vs_mu = wilcox_decile_vs_mu,
-    kruskal      = kr,
-    pairwise     = pw,
-    summary      = summary_df
-  )
-}
-
-# Empirical p-value per decile: the share of null replicates that reach or exceed
-# the observed proportion.
-compute_empirical_pvalues <- function(observed_df, null_df) {
-  n_iter <- length(unique(null_df$Iter))
-  observed_df %>%
-    rowwise() %>%
-    mutate(
-      p_value = {
-        q   <- Decile
-        obs <- Mean_Used_Prop
-        null_values <- null_df %>%
-          filter(Decile == q) %>%
-          pull(Used_Prop)
-        (sum(null_values >= obs) + 1) / (n_iter + 1)
-      }
-    ) %>%
-    ungroup()
-}
-
-# ------------------------------------------------------------------------------
-# 9. GLM models (threatened status ~ trait / use)
-# ------------------------------------------------------------------------------
-
-# Keeps only assessed species and adds the binary response 'Menaced'
-# (1 = CR, EN, VU or NT; 0 = LC).
-prepare_menaced_data_var <- function(data) {
-  threatened_levels <- c("CR", "EN", "VU", "NT")
-
-  data %>%
-    filter(IUCN %in% c("CR", "EN", "VU", "NT", "LC")) %>%
-    mutate(
-      Menaced = if_else(IUCN %in% threatened_levels, 1, 0)
-    )
-}
-
-# Adds the two-level factor used as contrast: species used by the target
-# activity vs species with no use at all.
-add_use_type_var <- function(data, usage) {
-  data %>%
-    mutate(
-      Use_type = case_when(
-        .data[[usage]] == 1 ~ "Used",
-        `Non use` == 1      ~ "Non use",
-        TRUE                ~ NA_character_
-      )
-    ) %>%
-    filter(!is.na(Use_type))
-}
-
-# Logistic model with interaction: Menaced ~ variable * Use_type.
-# Returns the fitted model, its tidy summary, fit indices and marginal effects.
-run_glm_with_nonuse_var <- function(data, usage, var_name = "Ui") {
-  df <- data %>%
-    add_use_type_var(usage) %>%
-    prepare_menaced_data_var()
-
-  if (nrow(df) < 10) return(NULL)
-
-  formula_str <- as.formula(glue::glue("Menaced ~ {var_name} * Use_type"))
-
-  model <- glm(formula_str, data = df, family = binomial)
-
-  list(
-    usage       = usage,
-    variable    = var_name,
-    model       = model,
-    summary     = broom::tidy(model, conf.int = TRUE),
-    performance = performance::model_performance(model),
-    effect_plot = ggpredict(model, terms = c(var_name, "Use_type"))
-  )
-}
-
-# Same logistic model restricted to the species of one activity, without the
-# interaction term.
-run_glm_by_usage_var <- function(data, usage, var_name = "Ui") {
-  df <- data %>%
-    filter(.data[[usage]] == 1) %>%
-    prepare_menaced_data_var()
-
-  if (nrow(df) < 10) return(NULL)
-
-  formula_str <- as.formula(glue::glue("Menaced ~ {var_name}"))
-
-  model <- glm(formula_str, data = df, family = binomial)
-
-  list(
-    usage       = usage,
-    variable    = var_name,
-    model       = model,
-    summary     = broom::tidy(model, conf.int = TRUE),
-    performance = performance::model_performance(model),
-    effect_plot = ggpredict(model, terms = var_name)
-  )
-}
-
-# Gathers the slope of interest from a list of models into a single table,
-# sorted by p-value.
-make_model_table <- function(models_list) {
-  bind_rows(lapply(models_list, function(x) {
-    if (is.null(x)) return(NULL)
-    x$summary %>%
-      filter(term == x$variable) %>%
-      mutate(Usage = x$usage)
-  })) %>%
-    select(Usage, term, estimate, conf.low, conf.high, p.value) %>%
-    arrange(p.value)
-}
-
-# One marginal-effect panel per model, assembled with patchwork.
-generate_effect_plots <- function(models_with_nonuse, variable_name = "Ui") {
-  lapply(models_with_nonuse, function(x) {
-    plot(x$effect_plot) +
-      labs(
-        title = x$usage,
-        y = "Probability of being threatened",
-        x = variable_name
-      ) +
-      theme_minimal()
-  }) %>%
-    patchwork::wrap_plots()
-}
-
-# Same marginal effects, returned as a single data frame instead of plots.
-generate_effect_df <- function(models_with_nonuse) {
-  bind_rows(lapply(models_with_nonuse, function(x) {
-    df <- as.data.frame(x$effect_plot)
-    df$Usage <- x$usage
-    return(df)
-  }))
-}
-
-# Largest observed value of the variable for one activity, used to cut the
-# predicted curves where the data actually stop.
-get_max_val_per_usage <- function(data, usage, variable_name = "Ui") {
-  data %>%
-    filter(IUCN %in% c("LC", "NT", "VU", "EN", "CR")) %>%
-    filter(.data[[usage]] == 1 | `Non use` == 1) %>%
-    summarise(max_val = max(.data[[variable_name]], na.rm = TRUE)) %>%
-    mutate(Usage = usage)
-}
-
-# Drops the extrapolated part of the predicted curves.
-# Expects the vector 'usages' in the global environment.
-generate_trimmed_effect_df <- function(effects_df, raw_data, variable_name = "Ui") {
-  max_vals <- bind_rows(lapply(usages, function(u) get_max_val_per_usage(raw_data, u, variable_name)))
-
-  effects_df %>%
-    left_join(max_vals, by = "Usage") %>%
-    filter(x <= max_val)
-}
-
-# Faceted figure of the predicted probability of being threatened, one panel per
-# activity.
-plot_glm_effects <- function(effects_df_trimmed, variable_name = "Ui") {
-  ggplot(effects_df_trimmed, aes(x = x, y = predicted, color = group)) +
-    geom_line(size = 1.2) +
-    geom_ribbon(
-      aes(ymin = conf.low, ymax = conf.high, fill = group),
-      alpha = 0.25, color = NA
-    ) +
-    scale_color_viridis_d(option = "B", begin = 0.2, end = 0.8, name = " ") +
-    scale_fill_viridis_d(option = "B", begin = 0.2, end = 0.8, name = " ") +
-    facet_wrap(~Usage, scales = "free") +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    labs(
-      x = glue::glue("Morphological {tolower(variable_name)}"),
-      y = "Probability of being threatened",
-      title = NULL
-    ) +
-    theme_minimal(base_size = 13) +
-    theme(
-      strip.text   = element_text(face = "bold", size = 13),
-      axis.title   = element_text(size = 14),
-      axis.text    = element_text(size = 12),
-      legend.position = "top",
-      legend.title = element_text(face = "bold")
-    )
-}
-
-# Reference model fitted on all assessed species, with no distinction of use.
-run_global_glm_var <- function(data, var_name = "Ui") {
-  df <- data %>%
-    filter(IUCN %in% c("LC", "NT", "VU", "EN", "CR")) %>%
-    mutate(Menaced = if_else(IUCN %in% c("CR", "EN", "VU", "NT"), 1, 0))
-
-  model <- glm(as.formula(glue::glue("Menaced ~ {var_name}")), data = df, family = binomial)
-
-  list(
-    model       = model,
-    summary     = broom::tidy(model, conf.int = TRUE),
-    performance = performance::model_performance(model),
-    effect_plot = ggpredict(model, terms = var_name)
-  )
-}
-
-# ------------------------------------------------------------------------------
-# 10. Imputation error evaluation
-# ------------------------------------------------------------------------------
-
-# Measures how much error the missForest imputation introduces in PCA space.
-# At each of the 'nboot' iterations: a share of the complete species is masked
-# using a real missingness pattern, the table is re-imputed with the
-# phylogenetic PCoA axes as predictors, the masked species are projected back
-# into the reference PCA and the error is expressed as an NRMSE per axis
-# (RMSE divided by the range of the axis).
-#
-# Returns a list with a summary table (mean +/- SD per axis, in %) and the full
-# matrix of bootstrap RMSE values.
-#
-# LONG: one full missForest run per iteration.
 evaluate_imputation_phylo <- function(traitsData, traitsDataImputed, selectedTraits,
                                       meanInputed, sdInputed, traitPCA, PCAmodel,
                                       phylogeny, dimensions = 1:4, percImpute = 0.1,
@@ -1455,4 +1107,324 @@ evaluate_imputation_phylo <- function(traitsData, traitsDataImputed, selectedTra
     cat("[7/7] Done.\n")
     return(list(summary = summary, RMSE = rmse_matrix))
   })
+}
+
+# --- Deficit maps -------------------------------------------------------------
+
+imageTPD_core <- function(tpd_c, thresholdPlot = 0.999) {
+  TPDList <- tpd_c$TPDc$TPDc
+  percentile_tables <- vector("list", length(TPDList))
+  for (k in seq_along(TPDList)) {
+    tmp <- cbind(index = seq_along(TPDList[[k]]), prob = TPDList[[k]])
+    tmp <- tmp[order(tmp[, "prob"], decreasing = TRUE), , drop = FALSE]
+    tmp <- cbind(tmp, percentile = cumsum(tmp[, "prob"]))
+    percentile_tables[[k]] <- tmp[order(tmp[, "index"]), , drop = FALSE]
+  }
+  xvals <- unique(tpd_c$data$evaluation_grid[, 1])
+  yvals <- unique(tpd_c$data$evaluation_grid[, 2])
+  out <- array(NA_real_, dim = c(length(xvals), length(yvals), length(TPDList)),
+               dimnames = list(xvals, yvals, names(TPDList)))
+  for (k in seq_along(TPDList)) {
+    df <- tpd_c$data$evaluation_grid
+    df$percentile <- percentile_tables[[k]][, "percentile"]
+    for (j in seq_along(yvals)) out[, j, k] <- df[df[, 2] == yvals[j], , drop = FALSE]$percentile
+    out[, , k][out[, , k] > thresholdPlot] <- NA_real_
+  }
+  out
+}
+
+occupancy_counts <- function(tpd_c) {
+  lapply(tpd_c$TPDc$RTPDs, function(m) { m[m > 0] <- 1; as.integer(rowSums(m)) })
+}
+
+vec_to_mat <- function(v, eval_grid) {
+  xvals <- unique(eval_grid[, 1]); yvals <- unique(eval_grid[, 2])
+  out <- matrix(NA_real_, nrow = length(xvals), ncol = length(yvals), dimnames = list(xvals, yvals))
+  tmp <- eval_grid; tmp$val <- v
+  for (j in seq_along(yvals)) out[, j] <- tmp[tmp[, 2] == yvals[j], , drop = FALSE]$val
+  out
+}
+
+deficit_maps <- function(TPDs, comm) {
+  tpd_c <- TPD::TPDc(TPDs = TPDs, sampUnit = comm)
+  list(
+    core_099  = imageTPD_core(tpd_c, thresholdPlot = 0.999),
+    core_full = imageTPD_core(tpd_c, thresholdPlot = 1),
+    counts    = occupancy_counts(tpd_c),
+    eval_grid = tpd_c$data$evaluation_grid
+  )
+}
+
+draw_deficit_panel <- function(maps, catg, limX, limY, xlab, ylab, palette,
+                               ncol = 1000, support_level = 0.999, contour_level = 0.999) {
+  xv <- unique(maps$eval_grid[, 1]); yv <- unique(maps$eval_grid[, 2])
+  core_all <- maps$core_099[, , "ALL"]
+
+  n_all <- maps$counts[["ALL"]]
+  n_use <- maps$counts[[catg]]
+  deficit_vec <- 1 - ((n_all - n_use) / n_all)
+  deficit_vec[!is.finite(deficit_vec)] <- NA_real_
+  deficit_vec[deficit_vec < 0] <- 0
+  deficit_vec[deficit_vec > 1] <- 1
+  deficit_mat <- vec_to_mat(deficit_vec, maps$eval_grid)
+  deficit_mat[is.na(core_all)] <- NA_real_
+
+  ColorRamp <- palette(ncol)
+
+  image(x = xv, y = yv, z = core_all, xlim = limX, ylim = limY, col = ColorRamp,
+        xaxs = "r", yaxs = "r", axes = FALSE, asp = 1, xlab = "", ylab = "")
+  for (cont in contourLines(x = xv, y = yv, z = maps$core_full[, , "ALL"], levels = support_level)) {
+    polygon(x = cont$x, y = cont$y, col = 1, border = NA)
+  }
+  image(x = xv, y = yv, z = deficit_mat, xlim = limX, ylim = limY, col = ColorRamp,
+        add = TRUE, xlab = "", ylab = "")
+  for (cont in contourLines(x = xv, y = yv, z = maps$core_full[, , "ALL"], levels = contour_level)) {
+    lines(cont$x, cont$y, lwd = 1.5, lty = 1, col = "black")
+  }
+
+  box(which = "plot")
+  axis(1, tcl = 0.3, lwd = 0.8, cex.axis = 1.1)
+  axis(2, las = 1, tcl = 0.3, lwd = 0.8, cex.axis = 1.1)
+  mtext(xlab, side = 1, line = 2.2, cex = 1.0)
+  mtext(ylab, side = 2, line = 2.6, cex = 1.0)
+  title(main = catg, cex.main = 1.2)
+
+  invisible(ColorRamp)
+}
+
+draw_deficit_row <- function(maps, usages, limX, limY, xlab, ylab, palette, ncol = 1000) {
+  layout(matrix(1:6, nrow = 1), widths = c(0.3, 0.3, 0.3, 0.3, 0.3, 0.1))
+  par(mar = c(5.2, 5.2, 2.5, 0.5))
+  for (catg in usages) {
+    ColorRamp <- draw_deficit_panel(maps, catg, limX, limY, xlab, ylab, palette, ncol)
+  }
+  par(mar = c(5.2, 0.8, 2.5, 0.8))
+  plot(c(0, 2), c(0, 1), type = "n", axes = FALSE, xlab = "", ylab = "")
+  rasterImage(as.raster(matrix(ColorRamp, ncol = 1)), xleft = 0, ybottom = 0, xright = 1, ytop = 1)
+  y_ticks <- c(1, 0.75, 0.5, 0.25, 0)
+  segments(x0 = 1.00, x1 = 1.10, y0 = y_ticks, y1 = y_ticks, lwd = 1.2)
+  graphics::text(x = 1.55, y = y_ticks, labels = paste0(c(100, 75, 50, 25, 0), "%"), cex = 1)
+  rect(xleft = 0, ybottom = 0, xright = 1, ytop = 1, border = "black", lwd = 1)
+}
+
+# --- Trait labels -------------------------------------------------------------
+
+trait_labels <- c(
+  es  = "Relative eye size",
+  ep  = "Vertical eye position",
+  ms  = "Relative maxillary length",
+  mp  = "Oral gape position",
+  elo = "Body elongation",
+  wid = "Body lateral shape",
+  pp  = "Pectoral fin vertical position",
+  ps  = "Pectoral fin size",
+  cs  = "Caudal peduncle throttling",
+  svl = "Standard body length",
+  bm  = "Body mass"
+)
+
+# --- Correlation circle -------------------------------------------------------
+
+plot_cor_circle <- function(pca_trait, pc_x = 1, pc_y = 2, stretch = 1.6) {
+  loadings <- unclass(pca_trait$pca_object$loadings)
+  loadings[, 1] <- -loadings[, 1]
+  sdev <- pca_trait$pca_object$sdev
+  pct  <- round(100 * sdev^2 / sum(sdev^2), 1)
+
+  arrows_df <- tibble(x = stretch * loadings[, pc_x], y = stretch * loadings[, pc_y])
+  circle_df <- tibble(angle = seq(0, 2 * pi, length.out = 300), x = cos(angle), y = sin(angle))
+
+  ggplot() +
+    geom_path(data = circle_df, aes(x = x, y = y), color = "grey40", linewidth = 0.8) +
+    geom_hline(yintercept = 0, color = "grey40", linewidth = 0.6) +
+    geom_vline(xintercept = 0, color = "grey40", linewidth = 0.6) +
+    geom_segment(
+      data = arrows_df, aes(x = 0, y = 0, xend = x, yend = y),
+      color = "black", arrow = arrow(length = unit(0.3, "cm"), type = "closed"), linewidth = 1.1
+    ) +
+    labs(
+      x = paste0("PC", pc_x, " (", pct[pc_x], "%)"),
+      y = paste0("PC", pc_y, " (", pct[pc_y], "%)"),
+      title = " "
+    ) +
+    coord_fixed(xlim = c(-1.15, 1.15), ylim = c(-1.15, 1.15)) +
+    theme_minimal(base_size = 13) +
+    theme(
+      panel.grid = element_blank(),
+      axis.line  = element_blank(),
+      axis.ticks = element_blank(),
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 13),
+      axis.title = element_text(size = 12)
+    )
+}
+
+# --- Figure layout ------------------------------------------------------------
+
+fig_font <- "Arial"
+
+fig_save <- function(file, width, height, draw, dpi = 600) {
+  dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
+  grDevices::cairo_pdf(paste0(file, ".pdf"), width = width / 72, height = height / 72)
+  fig_draw(width, height, draw)
+  grDevices::dev.off()
+  ragg::agg_png(paste0(file, ".png"), width = width / 72, height = height / 72,
+                units = "in", res = dpi, background = "white")
+  fig_draw(width, height, draw)
+  grDevices::dev.off()
+  invisible(file)
+}
+
+fig_draw <- function(width, height, draw) {
+  grid::grid.newpage()
+  grid::grid.rect(gp = grid::gpar(fill = "white", col = NA))
+  grid::pushViewport(grid::viewport(xscale = c(0, width), yscale = c(height, 0)))
+  draw()
+  grid::popViewport()
+}
+
+fig_viewport <- function(x, y, width, height) {
+  grid::viewport(
+    x = grid::unit(x, "native"), y = grid::unit(y, "native"),
+    width = grid::unit(width, "bigpts"), height = grid::unit(height, "bigpts"),
+    just = c("left", "top")
+  )
+}
+
+fig_plot <- function(plot, x, y, width, height) {
+  vp <- fig_viewport(x, y, width, height)
+  if (inherits(plot, "gg")) {
+    print(plot, vp = vp, newpage = FALSE)
+  } else {
+    grid::pushViewport(vp)
+    grid::grid.draw(plot)
+    grid::popViewport()
+  }
+}
+
+panel_png <- function(plot, width, height, res = 300, device = c("ragg", "png"),
+                      bg = "white", ...) {
+  file <- tempfile(fileext = ".png")
+  if (match.arg(device) == "ragg") {
+    ragg::agg_png(file, width = width, height = height, units = "px", res = res,
+                  background = bg)
+  } else {
+    grDevices::png(file, width = width, height = height, res = res, bg = bg, ...)
+  }
+  if (is.function(plot)) plot() else print(plot)
+  grDevices::dev.off()
+  file
+}
+
+fig_image <- function(file, x, y, width, height, clip = NULL, flip_y = FALSE) {
+  img <- png::readPNG(file)
+  if (flip_y) img <- img[dim(img)[1]:1, , , drop = FALSE]
+  if (!is.null(clip)) {
+    grid::pushViewport(grid::viewport(
+      x = grid::unit(clip[1], "native"), y = grid::unit(clip[2], "native"),
+      width = grid::unit(clip[3] - clip[1], "bigpts"), height = grid::unit(clip[4] - clip[2], "bigpts"),
+      just = c("left", "top"), clip = "on",
+      xscale = c(clip[1], clip[3]), yscale = c(clip[4], clip[2])
+    ))
+    on.exit(grid::popViewport())
+  }
+  grid::grid.raster(
+    img,
+    x = grid::unit(x, "native"), y = grid::unit(y, "native"),
+    width = grid::unit(width, "bigpts"), height = grid::unit(height, "bigpts"),
+    just = c("left", "top"), interpolate = TRUE
+  )
+}
+
+fig_text <- function(label, x, y, size, face = "plain", col = "black", rot = 0, hjust = 0) {
+  grid::grid.text(
+    label, x = grid::unit(x, "native"), y = grid::unit(y, "native"),
+    hjust = hjust, vjust = 0, rot = rot,
+    gp = grid::gpar(fontfamily = fig_font, fontface = face, fontsize = size, col = col)
+  )
+}
+
+fig_text_runs <- function(runs, x, y, col = "black") {
+  for (r in runs) {
+    dy   <- if (is.null(r$dy)) 0 else r$dy
+    face <- if (is.null(r$face)) "plain" else r$face
+    fig_text(r[[1]], x, y + dy, r[[2]], face, col)
+    gp <- grid::gpar(fontfamily = fig_font, fontface = face, fontsize = r[[2]])
+    x  <- x + grid::convertWidth(grid::grobWidth(grid::textGrob(r[[1]], gp = gp)),
+                                 "bigpts", valueOnly = TRUE)
+  }
+}
+
+fig_texts <- function(df) {
+  df <- as.data.frame(df)
+  if (is.null(df$face)) df$face <- "plain"
+  if (is.null(df$col))  df$col  <- "black"
+  if (is.null(df$rot))  df$rot  <- 0
+  if (!nrow(df)) return(invisible())
+  for (i in seq_len(nrow(df))) {
+    fig_text(df$label[i], df$x[i], df$y[i], df$size[i], df$face[i], df$col[i], df$rot[i])
+  }
+}
+
+fig_line <- function(x, y, col = "black", lwd = 0.5, lty = "solid", fill = NA,
+                     arrow = NULL, lineend = "butt") {
+  gp <- grid::gpar(col = col, lwd = lwd * 96 / 72, lty = lty, fill = fill,
+                   lineend = lineend, linejoin = "mitre")
+  if (is.na(fill)) {
+    grid::grid.lines(grid::unit(x, "native"), grid::unit(y, "native"), arrow = arrow, gp = gp)
+  } else {
+    grid::grid.polygon(grid::unit(x, "native"), grid::unit(y, "native"), gp = gp)
+  }
+}
+
+fig_circle <- function(x, y, r, col = "black", lwd = 0.5, fill = NA) {
+  grid::grid.circle(grid::unit(x, "native"), grid::unit(y, "native"), grid::unit(r, "bigpts"),
+                    gp = grid::gpar(col = col, lwd = lwd * 96 / 72, fill = fill))
+}
+
+fig_arrow <- function(x0, y0, x1, y1, lwd, col = "#808080", dashed = TRUE, dot = TRUE,
+                      both_ends = FALSE) {
+  len <- sqrt((x1 - x0)^2 + (y1 - y0)^2)
+  u   <- c(x1 - x0, y1 - y0) / len
+  if (dashed) {
+    s <- seq(0, len, by = 5 * lwd)
+    e <- pmin(s + 4 * lwd, len)
+    grid::grid.segments(
+      x0 + s * u[1], y0 + s * u[2], x0 + e * u[1], y0 + e * u[2], default.units = "native",
+      gp = grid::gpar(col = col, lwd = lwd * 96 / 72, lineend = "butt")
+    )
+  } else {
+    fig_line(c(x0, x1), c(y0, y1), col = col, lwd = lwd)
+  }
+  head <- function(px, py, v) {
+    tip <- c(px, py) + 0.25 * lwd * v
+    arm <- function(a) tip - 4.24 * lwd * c(v[1] * cos(a) - v[2] * sin(a), v[1] * sin(a) + v[2] * cos(a))
+    p <- rbind(arm(pi / 4), tip, arm(-pi / 4))
+    fig_line(p[, 1], p[, 2], col = col, lwd = lwd)
+  }
+  head(x1, y1, u)
+  if (both_ends) head(x0, y0, -u)
+  if (dot) fig_circle(x0, y0, 2.5 * lwd, col = NA, fill = col)
+}
+
+# --- PhyloPic silhouettes -----------------------------------------------------
+
+fetch_phylopic_cache <- function(manifest, cache_file) {
+  cache <- if (file.exists(cache_file)) readRDS(cache_file) else list()
+  new_uuid <- setdiff(unique(manifest$uuid), names(cache))
+  if (length(new_uuid) > 0L) {
+    for (u in new_uuid) cache[[u]] <- rphylopic::get_phylopic(u, format = "vector")
+    saveRDS(cache, cache_file)
+  }
+  setNames(cache[manifest$uuid], manifest$species)
+}
+
+fig_silhouette <- function(img, x0, y0, x1, y1, flip = "none") {
+  if (flip == "h") img <- rphylopic::flip_phylopic(img, horizontal = TRUE, vertical = FALSE)
+  grid::pushViewport(fig_viewport(x0, y0, x1 - x0, y1 - y0))
+  grid::grid.draw(grImport2::pictureGrob(
+    img, width = grid::unit(1, "npc"), height = grid::unit(1, "npc"),
+    xscale = img@summary@xscale, yscale = img@summary@yscale,
+    distort = TRUE, expansion = 0, clip = "off"
+  ))
+  grid::popViewport()
 }

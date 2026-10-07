@@ -1,146 +1,90 @@
 # FishUsage
 
+[![Paper](https://img.shields.io/badge/Nature%20Communications-10.1038%2Fs41467--026--78568--9-blue)](https://doi.org/10.1038/s41467-026-78568-9)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21873314.svg)](https://doi.org/10.5281/zenodo.21873314)
 
-Data, scripts and workflows for a study of human uses of freshwater fishes.
+Data and code for the paper:
+
+> Bouchet, P., Brosse, S. & Toussaint, A. **Human targeting of
+> morphologically unique fishes amplifies the risk of functional erosion.**
+> *Nature Communications* (2026).
+> [https://doi.org/10.1038/s41467-026-78568-9](https://doi.org/10.1038/s41467-026-78568-9)
 
 The analysis covers **8,970 freshwater fish species** and five categories of human
-use (fisheries, aquaculture, aquarium, bait, game fish). It asks
-where used species sit in the morphological space of freshwater fishes, whether
+use (fisheries, aquaculture, aquarium, bait, game fish). It asks where used
+species sit in the morphological space of freshwater fishes, whether
 morphologically distinctive species are more likely to be targeted, and how much
 of that space would be lost if threatened species disappeared.
 
----
-
-## Repository structure
+## Repository contents
 
 ```
 FishUsage/
 ├── script/                            # Analysis pipeline
+│   ├── 00_RunAll.R                    # Runs the whole pipeline
+│   ├── 00_make_figures.R              # Draws the figures of the paper
 │   ├── 000_library.R                  # Packages
-│   ├── 000_functions.R                # Every custom function
+│   ├── 000_functions.R                # Custom functions
+│   ├── 000_layout.R                   # Page layout of the figures
 │   ├── 000_LoadDataR.R                # Traits, phylogeny, IUCN status, human uses
 │   ├── 000_ScrappingData.R            # Human uses scraped from FishBase pages
 │   ├── 01_FRic_Dissim.R               # Functional richness and dissimilarity
 │   ├── 02_FSpaces_Usages.R            # Functional spaces per use category
 │   ├── 03_PCA_mean_trait_value.R      # Null model on mean PCA scores
 │   ├── 04_Null_model_IUCN.R           # FRic loss under nested threat scenarios
-│   ├── 05_Distinctiveness_IUCN.R      # Uniqueness and distinctiveness
-│   ├── 06_Shift_FS.R                  # TPD and functional space shifts
+│   ├── 05_Distinctiveness_IUCN.R      # Uniqueness and distinctiveness (Fig. S5)
+│   ├── 06_Shift_FS.R                  # 2D TPD used by the shift maps (Fig. 4)
 │   ├── 07_imputation_error.R          # missForest imputation error
-│   ├── 08_Fig_FSpaces_Usages.R        # Figure: functional spaces
-│   ├── 09_Fig_Null_Model_IUCN.R       # Figure: functional richness loss
-│   ├── 10_Fig_Distinctiveness.R       # Figure: distinctiveness
-│   ├── 11_Fig_Loadings_PCA.R          # Figure: PCA loadings heatmap
-│   ├── 12_FS_Shifts_TPD.R             # Figure: functional deficit maps
+│   ├── 08_Fig_FSpaces_Usages.R        # Functional spaces (Figs 1, S1)
+│   ├── 09_Fig_Null_Model_IUCN.R       # Functional richness loss (Fig. 4)
+│   ├── 10_Fig_Distinctiveness.R       # Distinctiveness (Fig. 3)
+│   ├── 11_Fig_Loadings_PCA.R          # PCA loadings (Fig. S2)
+│   ├── 12_FS_Shifts_TPD.R             # Functional deficit maps (Figs 2, S3)
 │   ├── 13_Single_vs_MI.R              # Single vs multiple imputation
 │   ├── 100_Imputation_SI_MI.R         # 100 missForest imputations
-│   ├── plot_pca_correlation_circle.R  # Alternative correlation circles
-│   ├── web scrapping percentage.R     # What the scraping added over rfishbase
-│
-│
-├── dataPrepared/Fish/                 # Intermediate tables built by 000_LoadDataR.R
-│                                      #   cleaned traits, imputed traits, phylogenetic PCoA
-│
-├── output/                            # Precomputed results reloaded by the scripts (~190 MB)
-│
-├── figures/                           # Main (fig1-fig4) and supplementary
-│                                      #   (figS1-figS5) figures, PDF
-│
-├── README.md                          # This file
-└── .gitignore
+│   └── web scrapping percentage.R     # Contribution of the scraping over rfishbase
+├── dataPrepared/                      # Prepared input data
+├── output/                            # Precomputed results (~190 MB)
+├── figures/                           # Figures 1-4 and S1-S5 (PDF, PNG 600 dpi)
+└── FishUsage.Rproj                    # RStudio project
 ```
 
-Every script uses paths relative to the project root, so R must be started from
-the folder that contains `script/`, `dataPrepared/`, `figures/` and `output/`.
+## Data
 
-Raw source datasets (FISHMORPH traits/phylogeny, FishBase, IUCN Red List) are
-**not redistributed in this repository**; see [Data availability](#data-availability)
-below for how to obtain them from their original providers.
+All data needed to reproduce the analyses and figures are included in
+`dataPrepared/` (traits, phylogeny, IUCN categories, human uses, phylogenetic
+PCoA) and `output/` (precomputed results). They are also archived on Zenodo
+([10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)).
 
----
+| Dataset              | Source                                                                                                                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Morphological traits | Brosse, S. et al. FISHMORPH: a global database on morphological traits of freshwater fishes. *Glob. Ecol. Biogeogr.* **30**, 2330–2336 (2021). [doi:10.6084/m9.figshare.14891412](https://doi.org/10.6084/m9.figshare.14891412) |
+| Phylogeny            | Rabosky, D. L. et al. Data from: An inverse latitudinal gradient in speciation rate for marine fishes. Dryad (2019). [doi:10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4)                                  |
+| Human uses           | Froese, R. & Pauly, D. FishBase (2025), via [`rfishbase`](https://docs.ropensci.org/rfishbase/) and the species summary pages of [fishbase.org](https://www.fishbase.org/)                                                |
+| Conservation status  | IUCN Red List of Threatened Species, 2024 ([iucnredlist.org](https://www.iucnredlist.org/))                                                                                                                             |
+| Fish silhouettes     | [PhyloPic](https://www.phylopic.org/), public domain / CC0 (credits in `output/phylopic_credits.csv`)                                                                                                                    |
 
-## Data availability
+## System requirements
 
-Because several input datasets are third-party resources with their own
-redistribution terms, this project separates **prepared data** (freely
-redistributable) from **original data** (to be obtained from the original
-providers).
+R ≥ 4.1. Tested with R 4.3.2 on Windows 11. Required packages are listed in
+`script/000_library.R` and installed automatically when missing. No
+non-standard hardware is required.
 
-### Processed data
+## Reproducing the results
 
-The processed objects (`dataPrepared/Fish/`) and the precomputed results (`output/`) are already included in this GitHub repository and are sufficient to reproduce every analysis downstream of `script/000_LoadDataR.R`. They are also archived on Zenodo.
+Open `FishUsage.Rproj` and run `script/00_RunAll.R` (or
+`source("script/00_RunAll.R")` from the project root). The full pipeline runs in
+about 15 minutes on a standard desktop computer. `script/00_make_figures.R`
+redraws the figures only. Each numbered script can also be run on its own.
 
-Clone this repository, or download the archive from Zenodo:
-- [10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)
-- Unzip it at the root of the project so that the structure becomes:
+Steps that take hours (web scraping, missForest imputations, null models with
+999 randomizations) are commented out and flagged `[LONG]`; their results are
+stored in `dataPrepared/` and `output/` and reloaded instead.
 
-```
-FishUsage/
-├── dataPrepared/
-│   └── Fish/        # Cleaned and imputed traits, phylogenetic PCoA
-└── output/           # Precomputed results reloaded by the scripts
-```
-
-### Raw data - original providers
-
-The raw inputs (`dataOriginal/`) are **not redistributed here**; they remain subject to the licenses of
-their respective providers. To re-run the full pipeline from scratch
-(`script/000_LoadDataR.R`), obtain them directly from the sources below and
-place them in `dataOriginal/`:
-
-| Dataset                    | Content                                       | Source / access                                                                                                                                                                       |
-| --------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Morphological traits       | Morphological traits measured on freshwater fish species | Brosse, S. et al. FISHMORPH: A global database on morphological traits of freshwater fishes. Global Ecol. Biogeogr. 30, 2330–2336 (2021). - data on figshare (CC BY) [here](https://doi.org/10.6084/m9.figshare.14891412)             |
-| Phylogeny                   | Data from: An inverse latitudinal gradient in speciation rate for marine fishes     | Rabosky, Daniel L.; Chang, Jonathan; Title, Pascal O. et al. (2019). Data from: An inverse latitudinal gradient in speciation rate for marine fishes [Dataset]. Dryad. [https://doi.org/10.5061/dryad.fc71cp4](https://doi.org/10.5061/dryad.fc71cp4)|
-| Human uses | Human uses record     | Froese, R. & Pauly, D. FishBase. (2025). Accessed through [`rfishbase`](https://docs.ropensci.org/rfishbase/) and by scraping the summary pages [https://www.fishbase.org/](https://www.fishbase.org/).                                       |
-| Conservation status        | IUCN Red List category                        | IUCN Red List [iucnredlist.org](https://www.iucnredlist.org/) (terms of use apply)                                                                                                                                  |
-
----
-
-## Reproducing the analysis
-
-Requires **R ≥ 4.1** (the native pipe `|>` is used in places).
-
-1. Clone the repository:
-
-```
-git clone https://github.com/pierrolaloune/FishUsage.git
-cd FishUsage
-```
-
-2. Open R from the project root, then source the setup scripts in this order, at
-the start of every session:
-
-```
-source("script/000_library.R")    # installs any missing package, then loads all of them
-source("script/000_functions.R")  # defines every custom function
-source("script/000_LoadDataR.R")  # builds the trait, IUCN and human-use tables
-```
-
-3. Run any numbered script. Each one reloads what it needs from `output/`, so
-they are independent and can be run in any order:
-
-```
-source("script/01_FRic_Dissim.R")
-```
-
-The one exception is `web scrapping percentage.R`, which reuses an object
-built by `000_LoadDataR.R` and must run in the same session.
-
-Figures are written to `figures/`, result tables to `output/`.
-
-> **A note on runtime.** Web scraping, random-forest imputation and the null
-> models with 999 replicates each take hours. Every one of those steps is **already commented out**, with its result stored in `output/` or `dataPrepared/` and reloaded on the next line, so the scripts run end to end as
-> they are. Each is flagged `[LONG]` in the section title of the script it
-> belongs to. Uncomment a block only to rebuild that file from scratch.
-
----
-
+Figures are written to `figures/` at their print size.
 
 ## Contact
 
 Pierre Bouchet, CRBE, Université de Toulouse, France
-
-- Email: <pierre.bouchet@utoulouse.fr> or <pierrebdef@gmail.com>
-- Website: <https://pierrolaloune.github.io/>
+(<pierre.bouchet@utoulouse.fr>, <pierrebdef@gmail.com>,
+<https://pierrolaloune.github.io/>)

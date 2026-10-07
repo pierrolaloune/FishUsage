@@ -1,59 +1,29 @@
-# ------------------------------------------------------------------------------
-# Script : 000_LoadDataR
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 000_LoadDataR ------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+source("script/000_library.R")
+source("script/000_functions.R")
 
-# This script imports FishMORPH trait and phylogeny data, enriches traits with
-# FishBase length/weight information, filters freshwater species, and computes or
-# loads a phylogenetic PCoA. It then standardizes taxonomy, matches IUCN (2024)
-# categories with synonym handling, assembles a final trait-phylogeny-IUCN table,
-# and loads a missForest-imputed trait dataset. Finally, it loads PCA/TPD outputs,
-# integrates binary human-use categories into the PCA object, and builds a
-# community matrix (uses x species) for subsequent TPD analyses.
-#
-# Every step that queries an online database or runs an imputation is commented
-# out: those steps take hours. Their result is stored in dataPrepared/ or output/
-# and reloaded immediately afterwards, so the script runs end to end as it is.
-# Uncomment a block only if you need to rebuild that file from scratch.
+# --- Data ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Data import
-# ------------------------------------------------------------------------------
-
-# ---- Raw trait and phylogeny from FishMORPH ----
-trait     <- readRDS("dataOriginal/FishMORPH_Traits.rds")
-phylogeny <- readRDS("dataOriginal/FishMORPH_Phylogeny.rds")
+trait      <- readRDS("dataPrepared/Fish/FishMORPH_Traits.rds")
+phylogeny  <- readRDS("dataPrepared/Fish/FishMORPH_Phylogeny.rds")
 traitNames <- colnames(trait)[-c(1:6)]
 
-# ------------------------------------------------------------------------------
-# Traits + FishBase length/weight  [LONG]
-# ------------------------------------------------------------------------------
+# --- FishBase length/weight [LONG] --------------------------------------------
 
-# LONG: one FishBase query per species. Result saved as fishTraitsMissing.txt
-# and reloaded at the end of this section.
-
-# # ---- Species list ----
 # list_sp <- gsub("\\.", " ", as.character(trait$Genus.species))
 #
-# # ---- Length-weight from FishBase ----
-# lgtwgt <- as.data.frame(length_weight(list_sp))
+# lgtwgt <- as.data.frame(rfishbase::length_weight(list_sp))
 # lgtwgt <- lgtwgt[!is.na(lgtwgt$a) & !is.na(lgtwgt$b), ]
 #
-# # ---- Best a, b coefficients per species ----
 # ab <- lgtwgt %>%
 #   dplyr::group_by(Species) %>%
 #   dplyr::slice_max(order_by = CoeffDetermination, with_ties = FALSE, na_rm = TRUE) %>%
 #   dplyr::select(Species, a, b) %>%
 #   dplyr::distinct()
 #
-# # ---- Additional traits from FishBase ----
-# speciesInfo <- species(list_sp) %>% data.table::data.table()
-# speciesInfoSub <- speciesInfo[, .(Species, Fresh, LongevityWild, Length, Weight, LTypeMaxM)]
-# speciesInfoSub <- unique(speciesInfoSub)
+# speciesInfo <- rfishbase::species(list_sp) %>% data.table::data.table()
+# speciesInfoSub <- unique(speciesInfo[, .(Species, Fresh, LongevityWild, Length, Weight, LTypeMaxM)])
 # speciesInfoSub$Species <- gsub(" ", ".", speciesInfoSub$Species)
 #
 # speciesInfoSub <- speciesInfoSub %>%
@@ -65,26 +35,19 @@ traitNames <- colnames(trait)[-c(1:6)]
 #       NA
 #     )
 #   ) %>%
-#   dplyr::mutate(
-#     Weight = ifelse(is.na(Weight) & !is.na(Weight2), Weight2, Weight)
-#   )
+#   dplyr::mutate(Weight = ifelse(is.na(Weight) & !is.na(Weight2), Weight2, Weight))
 #
-# # ---- Merge FishMORPH traits with FishBase length/weight ----
 # fishTraits <- merge(
 #   trait[, 6:15],
 #   speciesInfoSub[, .(Species, Length, Weight)],
-#   by.x = "Genus.species",
-#   by.y = "Species",
-#   all.x = TRUE
+#   by.x = "Genus.species", by.y = "Species", all.x = TRUE
 # )
 #
-# # ---- Log-transform every trait ----
 # fishTraits <- fishTraits %>%
 #   dplyr::mutate(dplyr::across(-Genus.species, ~ log10(.x + 1))) %>%
 #   dplyr::rename(species = Genus.species) %>%
 #   dplyr::mutate(species = gsub("\\.", "_", species))
 #
-# # ---- Keep freshwater species only ----
 # spToKeep <- fishTraits %>%
 #   dplyr::select(species) %>%
 #   dplyr::mutate(species = gsub("_", " ", species)) %>%
@@ -96,67 +59,40 @@ traitNames <- colnames(trait)[-c(1:6)]
 #   dplyr::mutate(Species = gsub(" ", "_", Species)) %>%
 #   dplyr::pull()
 #
-# fishTraits <- fishTraits %>%
-#   dplyr::filter(species %in% spToKeep)
+# fishTraits <- fishTraits %>% dplyr::filter(species %in% spToKeep)
 #
-# dir.create("dataPrepared/Fish", showWarnings = FALSE, recursive = TRUE)
 # write.table(fishTraits, "dataPrepared/Fish/fishTraitsMissing.txt")
 
-# ---- Recommended: load the saved table ----
 fishTraits <- read.table("dataPrepared/Fish/fishTraitsMissing.txt")
 
-# ------------------------------------------------------------------------------
-# Phylogenetic PCoA  [LONG]
-# ------------------------------------------------------------------------------
+# --- Phylogenetic PCoA [LONG] -------------------------------------------------
 
-phylogeny$tip.label <- gsub("\\.", "_", phylogeny$tip.label)
-phylogeny <- drop.tip(phylogeny, setdiff(phylogeny$tip.label, fishTraits$species))
-phylogenyTraits <- phytools::force.ultrametric(phylogeny)
-phylDiss <- sqrt(cophenetic(phylogenyTraits))
-
-# LONG: multidimensional scaling on a distance matrix of ~10,000 species.
+# phylogeny$tip.label <- gsub("\\.", "_", phylogeny$tip.label)
+# phylogeny <- ape::drop.tip(phylogeny, setdiff(phylogeny$tip.label, fishTraits$species))
+# phylogenyTraits <- phytools::force.ultrametric(phylogeny)
+# phylDiss <- sqrt(cophenetic(phylogenyTraits))
+#
 # pcoaPhyl <- cmdscale(phylDiss, k = 10)
 # write.table(pcoaPhyl, "dataPrepared/Fish/pcoaPhylogenyFish.txt")
 
-# ---- Recommended: load the saved coordinates ----
-pcoaPhyl <- read.table(
-  "dataPrepared/Fish/pcoaPhylogenyFish.txt",
-  header = TRUE,
-  stringsAsFactors = FALSE
-)
+pcoaPhyl <- read.table("dataPrepared/Fish/pcoaPhylogenyFish.txt", header = TRUE, stringsAsFactors = FALSE)
 
 rownames(pcoaPhyl) <- fishTraits$species
 colnames(pcoaPhyl) <- paste0("Eigen.", 1:10)
 
-# ------------------------------------------------------------------------------
-# Taxonomic standardization  [LONG]
-# ------------------------------------------------------------------------------
+# --- Taxonomy [LONG] ----------------------------------------------------------
 
-# LONG: one online name-resolution query per species. Result saved as
-# traitsWithPCOA.txt and reloaded at the end of this section.
-
-# list_sp_raw <- fishTraits$species
-# list_sp_raw <- gsub("_", " ", list_sp_raw)
-# list_sp_raw <- stringr::str_squish(list_sp_raw)
+# list_sp_raw <- stringr::str_squish(gsub("_", " ", fishTraits$species))
 #
-# # Resolve one name against the Global Names index; never fail on a single name.
 # gna_one_safe <- function(x) {
 #   tryCatch(
 #     taxize::gna_verifier(
-#       names         = x,
-#       data_sources  = 11,
-#       all_matches   = FALSE,
-#       capitalize    = TRUE,
-#       species_group = TRUE,
-#       output_type   = "table"
+#       names = x, data_sources = 11, all_matches = FALSE,
+#       capitalize = TRUE, species_group = TRUE, output_type = "table"
 #     ),
 #     error = function(e) {
-#       tibble::tibble(
-#         submittedName = x,
-#         matchedName   = NA_character_,
-#         matchType     = "Error",
-#         dataSourceId  = NA_real_
-#       )
+#       tibble::tibble(submittedName = x, matchedName = NA_character_,
+#                      matchType = "Error", dataSourceId = NA_real_)
 #     }
 #   )
 # }
@@ -164,11 +100,9 @@ colnames(pcoaPhyl) <- paste0("Eigen.", 1:10)
 # progressr::handlers(global = TRUE)
 # progressr::handlers("txtprogressbar")
 #
-# species_plan <- list_sp_raw
-#
 # verified_names <- progressr::with_progress({
-#   p <- progressr::progressor(along = species_plan)
-#   purrr::map_dfr(species_plan, function(x) {
+#   p <- progressr::progressor(along = list_sp_raw)
+#   purrr::map_dfr(list_sp_raw, function(x) {
 #     p(message = x)
 #     gna_one_safe(x)
 #   })
@@ -182,54 +116,24 @@ colnames(pcoaPhyl) <- paste0("Eigen.", 1:10)
 #
 # write.table(traitsAndPCOA, "dataPrepared/Fish/traitsWithPCOA.txt")
 
-# ---- Recommended: load the saved table ----
-traitsAndPCOA <- read.table(
-  "dataPrepared/Fish/traitsWithPCOA.txt",
-  header = TRUE,
-  stringsAsFactors = FALSE
-)
+traitsAndPCOA <- read.table("dataPrepared/Fish/traitsWithPCOA.txt", header = TRUE, stringsAsFactors = FALSE)
 
-# ------------------------------------------------------------------------------
-# IUCN data (2024) + synonyms  [LONG]
-# ------------------------------------------------------------------------------
+# --- IUCN [LONG] --------------------------------------------------------------
 
-# LONG: the synonym lookup queries FishBase for every unmatched species. Result
-# saved as traitsWithPCOAIUCN.txt and reloaded at the end of this section.
-
-# species_list <- unique(stringr::str_trim(traitsAndPCOA$species))
-# iucn_statut <- read.csv(
-#   "dataOriginal/assessments.csv",
-#   header = TRUE,
-#   stringsAsFactors = FALSE
-# ) # IUCN Red List, 2024 release
-#
-# iucn_clean <- iucn_statut %>%
-#   dplyr::mutate(scientificName = stringr::str_trim(scientificName))
-#
+# species_list        <- unique(stringr::str_trim(traitsAndPCOA$species))
 # species_list_spaces <- gsub("_", " ", species_list)
 #
-# # ---- First pass: direct name matches ----
-# matched_species <- dplyr::inner_join(
-#   tibble::tibble(species = species_list_spaces),
-#   iucn_clean,
-#   by = c("species" = "scientificName")
-# )
+# iucn_clean <- read.csv("dataOriginal/assessments.csv", header = TRUE, stringsAsFactors = FALSE) %>%
+#   dplyr::mutate(scientificName = stringr::str_trim(scientificName))
 #
 # species_to_update <- tibble::tibble(species = species_list_spaces) %>%
 #   dplyr::anti_join(iucn_clean, by = c("species" = "scientificName"))
 #
-# # ---- Second pass: rewrite IUCN names through FishBase synonyms ----
-# synonyms_info <- rfishbase::synonyms(
+# synonyms_mapping <- rfishbase::synonyms(
 #   species_list = species_to_update$species,
-#   server       = "fishbase",
-#   version      = "latest",
-#   fields       = NULL
-# )
-#
-# synonyms_info_filtered <- synonyms_info %>%
-#   dplyr::filter(!Status %in% c("misapplied name", "ambiguous synonym", "provisionally accepted name"))
-#
-# synonyms_mapping <- synonyms_info_filtered %>%
+#   server = "fishbase", version = "latest", fields = NULL
+# ) %>%
+#   dplyr::filter(!Status %in% c("misapplied name", "ambiguous synonym", "provisionally accepted name")) %>%
 #   dplyr::select(Species, synonym) %>%
 #   dplyr::distinct()
 #
@@ -242,42 +146,17 @@ traitsAndPCOA <- read.table(
 #     )
 #   )
 #
-# matched_species <- dplyr::inner_join(
-#   tibble::tibble(species = species_list_spaces),
-#   iucn_clean,
-#   by = c("species" = "scientificName")
-# )
-#
-# species_to_update <- tibble::tibble(species = species_list_spaces) %>%
-#   dplyr::anti_join(iucn_clean, by = c("species" = "scientificName")) %>%
-#   as.data.frame()
-# rownames(species_to_update) <- species_to_update$species
-#
-# # ---- Third pass: manual corrections, checked by hand ----
-# species_to_check <- read.csv(
-#   "dataOriginal/species_to_update_900_done.csv",
-#   sep = ";",
-#   header = TRUE,
-#   stringsAsFactors = FALSE
-# )
+# species_to_check <- read.csv("dataOriginal/species_to_update_900_done.csv",
+#                              sep = ";", header = TRUE, stringsAsFactors = FALSE)
 # colnames(species_to_check) <- c("scientificName", "redlistCategory")
 #
-# iucn_clean <- iucn_clean[, c("scientificName", "redlistCategory")]
-#
-# # ---- Full category names to IUCN acronyms ----
 # acronyms <- c(
-#   "Critically Endangered" = "CR",
-#   "Endangered"            = "EN",
-#   "Vulnerable"            = "VU",
-#   "Near Threatened"       = "NT",
-#   "Least Concern"         = "LC",
-#   "Data Deficient"        = "DD",
-#   "Extinct"               = "EX",
-#   "Extinct in the Wild"   = "EW",
-#   "Not Evaluated"         = "NE"
+#   "Critically Endangered" = "CR", "Endangered" = "EN", "Vulnerable" = "VU",
+#   "Near Threatened" = "NT", "Least Concern" = "LC", "Data Deficient" = "DD",
+#   "Extinct" = "EX", "Extinct in the Wild" = "EW", "Not Evaluated" = "NE"
 # )
 #
-# iucn_clean <- iucn_clean %>%
+# iucn_clean <- iucn_clean[, c("scientificName", "redlistCategory")] %>%
 #   dplyr::mutate(redlistCategory = dplyr::recode(redlistCategory, !!!acronyms)) %>%
 #   dplyr::bind_rows(species_to_check) %>%
 #   dplyr::filter(scientificName %in% species_list_spaces) %>%
@@ -286,155 +165,60 @@ traitsAndPCOA <- read.table(
 #   dplyr::ungroup()
 #
 # traitsAndPCOA$species <- gsub("_", " ", traitsAndPCOA$species)
-# traitsAndPCOA$IUCN <- iucn_clean$redlistCategory[
-#   match(traitsAndPCOA$species, iucn_clean$scientificName)
-# ]
+# traitsAndPCOA$IUCN <- iucn_clean$redlistCategory[match(traitsAndPCOA$species, iucn_clean$scientificName)]
 #
 # write.table(traitsAndPCOA, "dataPrepared/Fish/traitsWithPCOAIUCN.txt")
 
-# ---- Recommended: load the saved table ----
-traitsAndPCOAIUCN <- read.table(
-  "dataPrepared/Fish/traitsWithPCOAIUCN.txt",
-  header = TRUE,
-  stringsAsFactors = FALSE
-)
+fishData <- read.table("dataPrepared/Fish/traitsWithPCOAIUCN.txt", header = TRUE, stringsAsFactors = FALSE)
 
-# ------------------------------------------------------------------------------
-# Complete taxonomy from GBIF  [LONG]
-# ------------------------------------------------------------------------------
+# --- missForest imputation [LONG] ---------------------------------------------
 
-# LONG: one GBIF query per species. Kept for reference only - 'taxInfo' is not
-# used anywhere downstream.
-
-# taxInfo <- pbapply::pblapply(traitsAndPCOAIUCN$species, function(sp) {
-#   tryCatch({
-#     traitdataform::get_gbif_taxonomy(
-#       sp,
-#       subspecies       = TRUE,
-#       higherrank       = TRUE,
-#       conf_threshold   = 80,
-#       resolve_synonyms = FALSE
-#     )[1, ]
-#   }, error = function(e) NULL)
-# }) %>%
-#   data.table::rbindlist(fill = TRUE)
-
-# ------------------------------------------------------------------------------
-# Final table + imputation setup
-# ------------------------------------------------------------------------------
-
-fishTraitsPhylogenyIUCN <- data.table::data.table(traitsAndPCOAIUCN)
-
-# write.table(fishTraitsPhylogenyIUCN, "dataPrepared/Fish/AllDataFish_clean.txt")
-fishData <- read.table(
-  "dataPrepared/Fish/traitsWithPCOAIUCN.txt",
-  header = TRUE,
-  stringsAsFactors = FALSE
-)
-
-# ---- Column ranges used for traits and for imputation ----
 columnsTraits     <- 2:(which(colnames(fishData) == "Eigen.1") - 1)
 columnsImputation <- 2:(which(colnames(fishData) == "IUCN") - 1)
 
-# ------------------------------------------------------------------------------
-# missForest imputation  [LONG]
-# ------------------------------------------------------------------------------
-
-# LONG: random-forest imputation over the whole trait table. Result saved as
-# fishData_imputed_forest.txt and reloaded below.
-
 # set.seed(123)
-# imputed_forest <- missForest(xmis = fishData[, columnsImputation])
+# imputed_forest <- missForest::missForest(xmis = fishData[, columnsImputation])
 # print(imputed_forest$OOBerror)
 #
-# traits_names <- colnames(fishData)[columnsTraits]
-#
 # fishData_imputed_forest <- fishData
-# fishData_imputed_forest[traits_names] <- imputed_forest$ximp[traits_names]
+# fishData_imputed_forest[colnames(fishData)[columnsTraits]] <- imputed_forest$ximp[colnames(fishData)[columnsTraits]]
 #
-# write.table(
-#   fishData_imputed_forest,
-#   "dataPrepared/Fish/fishData_imputed_forest.txt",
-#   row.names = FALSE
-# )
+# write.table(fishData_imputed_forest, "dataPrepared/Fish/fishData_imputed_forest.txt", row.names = FALSE)
 
-# ---- Recommended: load the saved table ----
-fishData_imputed_forest <- read.table(
-  "dataPrepared/Fish/fishData_imputed_forest.txt",
-  header = TRUE
-)
+fishData_imputed_forest <- read.table("dataPrepared/Fish/fishData_imputed_forest.txt", header = TRUE)
 
-# ------------------------------------------------------------------------------
-# Trait selection and renaming
-# ------------------------------------------------------------------------------
+# --- Trait selection ----------------------------------------------------------
 
-# FishMORPH trait codes, in the order used throughout the project.
-selectedTraits <- c(
-  "EdHd", "EhBd", "JlHd", "MoBd", "BlBd", "HdBd",
-  "PFiBd", "PFlBl", "CFdCPd", "Length", "Weight"
-)
+selectedTraits <- c("EdHd", "EhBd", "JlHd", "MoBd", "BlBd", "HdBd",
+                    "PFiBd", "PFlBl", "CFdCPd", "Length", "Weight")
+newTraitNames  <- c("es", "ep", "ms", "mp", "elo", "wid",
+                    "pp", "ps", "cs", "svl", "bm")
 
-# Short names used in every figure and table:
-#   es  eye size          ep  eye position       ms  maxillary length
-#   mp  oral gape position                       elo body elongation
-#   wid body lateral shape                       pp  pectoral fin position
-#   ps  pectoral fin size cs  caudal peduncle    svl standard length
-#   bm  body mass
-newTraitNames <- c(
-  "es", "ep", "ms", "mp", "elo", "wid",
-  "pp", "ps", "cs", "svl", "bm"
-)
-
-# ---- Observed traits, missing values kept ----
 fishTraitsMissing <- fishData[, selectedTraits]
-colnames(fishTraitsMissing) <- newTraitNames
-rownames(fishTraitsMissing) <- fishData$species
-
-# ---- Same traits, missing values imputed ----
 fishTraitsImputed <- fishData_imputed_forest[, selectedTraits]
-colnames(fishTraitsImputed) <- newTraitNames
-rownames(fishTraitsImputed) <- fishData$species
+colnames(fishTraitsMissing) <- colnames(fishTraitsImputed) <- newTraitNames
+rownames(fishTraitsMissing) <- rownames(fishTraitsImputed) <- fishData$species
 
-# ---- Attach the IUCN category ----
 fishTraitsMissing <- data.frame(fishTraitsMissing, IUCN = fishData$IUCN)
 fishTraitsImputed <- data.frame(fishTraitsImputed, IUCN = fishData$IUCN)
 
 # write.table(fishTraitsMissing, "dataPrepared/Fish/TraitFishMissing.txt")
 # write.table(fishTraitsImputed, "dataPrepared/Fish/TraitFishImputed.txt")
 
-# ------------------------------------------------------------------------------
-# PCA + TPD (morphological space)  [LONG]
-# ------------------------------------------------------------------------------
+# --- PCA + TPD [LONG] ---------------------------------------------------------
 
-# LONG: builds the trait probability density of every species. Result saved as
-# All_fish.rds and reloaded below.
-
-# results <- computePCAandTPDs(fishTraitsImputed[, !colnames(fishTraitsImputed) == "IUCN"])
+# results <- computePCAandTPDs(fishTraitsImputed[, colnames(fishTraitsImputed) != "IUCN"])
 # saveRDS(results, "output/All_fish.rds")
-
-# ---- Recommended: load the saved objects ----
-results   <- readRDS("output/All_fish.rds")
-pca_trait <- results$PCA
-tpd_trait <- results$TPDs
-
-# saveRDS(pca_trait, "output/PCA_fish.rds")
-# saveRDS(tpd_trait, "output/TPDs_fish.rds")
+# saveRDS(results$PCA,  "output/PCA_fish.rds")
+# saveRDS(results$TPDs, "output/TPDs_fish.rds")
 
 pca_trait <- readRDS("output/PCA_fish.rds")
 tpd_trait <- readRDS("output/TPDs_fish.rds")
 
-# ------------------------------------------------------------------------------
-# Add human uses to the PCA object
-# ------------------------------------------------------------------------------
+# --- Human uses ---------------------------------------------------------------
 
-# Two independent sources of use information are merged here:
-#   df_scraping : FishBase HTML pages, scraped in 000_ScrappingData.R
-#   df_uni      : the rfishbase tables
-# A species is flagged as used as soon as one of the two sources says so.
-
-df_scraping <- readRDS("output/fish_human_uses_binary_FB.rds") %>%
-  data.table::as.data.table()
-df_uni <- data.table::fread("dataPrepared/Fish/uni.csv") # from rfishbase
+df_scraping <- data.table::as.data.table(readRDS("output/fish_human_uses_binary_FB.rds"))
+df_uni      <- data.table::fread("dataPrepared/Fish/uni.csv")
 
 data.table::setnames(
   df_scraping,
@@ -448,83 +232,44 @@ binary_cols <- c("Fisheries", "Aquaculture", "Aquarium", "Game_fish", "Bait")
 merged_df <- merge(
   df_uni,
   df_scraping[, c("Species", binary_cols), with = FALSE],
-  by = "Species",
-  suffixes = c("", ".scraping"),
-  all.x = TRUE
+  by = "Species", suffixes = c("", ".scraping"), all.x = TRUE
 )
 
-# ---- Keep the highest value of the two sources for each use ----
 for (col in binary_cols) {
   col_scraping <- paste0(col, ".scraping")
-  if (col_scraping %in% colnames(merged_df)) {
-    merged_df[[col]] <- pmax(
-      as.numeric(merged_df[[col]]),
-      as.numeric(merged_df[[col_scraping]]),
-      na.rm = TRUE
-    )
-    merged_df[[col_scraping]] <- NULL
-  }
+  merged_df[[col]] <- pmax(as.numeric(merged_df[[col]]), as.numeric(merged_df[[col_scraping]]), na.rm = TRUE)
+  merged_df[[col_scraping]] <- NULL
 }
 
 merged_df[, All_uses := as.integer(Fisheries + Aquaculture + Aquarium + Game_fish + Bait > 0)]
 
-merged_df_clean <- merged_df %>%
-  dplyr::select(Species, dplyr::all_of(binary_cols), All_uses) %>%
-  dplyr::rename("Game fish" = Game_fish, "All uses" = All_uses)
-
 usage_cols <- c("Fisheries", "Aquaculture", "Aquarium", "Game fish", "All uses")
 
-uses_df <- as.data.frame(merged_df_clean[, c("Species", usage_cols), with = FALSE])
-uses_df <- uses_df[!is.na(uses_df$Species) & uses_df$Species != "NA", ]
+uses_df <- merged_df %>%
+  dplyr::select(Species, dplyr::all_of(binary_cols), All_uses) %>%
+  dplyr::rename("Game fish" = Game_fish, "All uses" = All_uses) %>%
+  as.data.frame()
+uses_df <- uses_df[!is.na(uses_df$Species) & uses_df$Species != "NA", c("Species", usage_cols)]
 rownames(uses_df) <- uses_df$Species
 uses_df$Species <- NULL
 
-# ---- Manual fix for one species whose name differs between sources ----
-uses_df["Centromochlus musaica", ] <- list(
-  Fisheries = 0,
-  Aquaculture = 0,
-  Aquarium = 1,
-  `Game fish` = 0,
-  `All uses` = 1
-)
+uses_df["Centromochlus musaica", ] <- list(0, 0, 1, 0, 1)
 
-# ---- Keep only the species present in both the PCA and the use table ----
-species_pca   <- rownames(pca_trait$traits_scores)
-species_uses  <- rownames(uses_df)
-species_ref   <- intersect(species_pca, species_uses)
-
+species_ref    <- intersect(rownames(pca_trait$traits_scores), rownames(uses_df))
 pca_trait$uses <- uses_df[species_ref, usage_cols, drop = FALSE]
-use <- pca_trait$uses
-score <- pca_trait$traits_scores
 
 # saveRDS(pca_trait, "output/pca_trait.rds")
 pca_trait <- readRDS("output/pca_trait.rds")
 
-# ------------------------------------------------------------------------------
-# Community matrix (uses x species)
-# ------------------------------------------------------------------------------
+# --- Community matrix ---------------------------------------------------------
 
-# One row per human use, one column per species, 1 = the species is used.
-# A final row "all" holds every species and serves as the global reference.
-
-species_scores <- as.data.frame(pca_trait$traits_scores[, 1:4])
-species_uses   <- as.data.frame(pca_trait$uses)
-
-species_uses$rownames   <- rownames(species_uses)
-species_scores$rownames <- rownames(species_scores)
-
-species_scores_uses <- merge(species_uses, species_scores, by = "rownames")
-rownames(species_scores_uses) <- species_scores_uses$rownames
-species_scores_uses$rownames  <- NULL
-species_uses$rownames         <- NULL
-
-MatriceFish <- t(as.matrix(species_uses))
-column_names <- rownames(species_uses)
-
-MatriceFish_1 <- matrix(1, nrow = 1, ncol = length(column_names))
-colnames(MatriceFish_1) <- column_names
-rownames(MatriceFish_1) <- "all"
-
-MatriceFish <- rbind(MatriceFish, MatriceFish_1)
+MatriceFish <- rbind(
+  t(as.matrix(pca_trait$uses)),
+  all = rep(1, nrow(pca_trait$uses))
+)
 
 # write.csv(MatriceFish, "output/MatriceFish.csv", row.names = TRUE)
+
+# --- Session ------------------------------------------------------------------
+
+sessionInfo()

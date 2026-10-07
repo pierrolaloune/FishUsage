@@ -1,210 +1,62 @@
-# ------------------------------------------------------------------------------
-# Script : 11_Fig_Loadings_PCA
-# Author : P. Bouchet
-# ------------------------------------------------------------------------------
+# --- 11_Fig_Loadings_PCA ------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# METHODOLOGICAL SUMMARY
-# ------------------------------------------------------------------------------
+source("script/000_library.R")
+source("script/000_functions.R")
 
-# This script loads a princomp PCA object and computes trait–axis correlations by
-# scaling PCA loadings with axis standard deviations. It produces both wide and
-# long correlation tables, generates a publication-ready heatmap of correlations,
-# and creates a PCA correlation circle (PC1-PC2) using correlation vectors, with
-# clean exports to the figures directory.
-#
-# A loading is not a correlation on its own: multiplying it by the standard
-# deviation of its axis turns it into the trait-axis correlation, which is what
-# both the heatmap and the circle display.
-#
-# Outputs: Figure S4 (heatmap) and Figure S4b (correlation circle).
+# --- Data ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Data import
-# ------------------------------------------------------------------------------
-
-# ---- Inputs ----
 pca_trait <- readRDS("output/pca_trait.rds")
 
-# ---- Guard clauses: fail early if the object is not the expected one ----
-stopifnot(exists("pca_trait"))
+pca_trait$traits_scores[, 1] <- -pca_trait$traits_scores[, 1]
 
-stopifnot(!is.null(pca_trait$pca_object))
-stopifnot(inherits(pca_trait$pca_object, "princomp"))
+# --- Correlations -------------------------------------------------------------
 
-dims_used <- pca_trait$dimensions_used
-stopifnot(is.numeric(dims_used), length(dims_used) == 1)
-stopifnot(dims_used == 4)
-
-# ------------------------------------------------------------------------------
-# Trait-axis correlations
-# ------------------------------------------------------------------------------
-
-# ---- Flip PC1 so that large-bodied species sit on the right ----
-# Every slot holding a PC1 value is flipped, so the object stays coherent.
-pca_trait$pca_object$scores[, 1]   <- -pca_trait$pca_object$scores[, 1]
-pca_trait$pca_object$loadings[, 1] <- -pca_trait$pca_object$loadings[, 1]
-
-if (!is.null(pca_trait$loadings)) {
-  pca_trait$loadings[, 1] <- -pca_trait$loadings[, 1]
-}
-
-if (!is.null(pca_trait$traits_scores)) {
-  if ("Comp.1" %in% names(pca_trait$traits_scores)) {
-    pca_trait$traits_scores$Comp.1 <- -pca_trait$traits_scores$Comp.1
-  }
-  if ("PC1" %in% names(pca_trait$traits_scores)) {
-    pca_trait$traits_scores$PC1 <- -pca_trait$traits_scores$PC1
-  }
-}
-
-# ---- Loadings of the selected axes ----
-loadings_mat <- unclass(pca_trait$loadings)[, 1:dims_used, drop = FALSE]
-stopifnot(is.matrix(loadings_mat))
-stopifnot(!anyNA(loadings_mat))
-
-# ---- Standard deviation of the matching axes ----
-sdev_vec <- pca_trait$pca_object$sdev[1:dims_used]
-stopifnot(length(sdev_vec) == ncol(loadings_mat))
-stopifnot(!anyNA(sdev_vec))
-
-# ---- Correlation = loading x sdev of the axis ----
-cor_mat <- sweep(loadings_mat, MARGIN = 2, STATS = sdev_vec, FUN = "*")
-
-# ---- Rename axes: Comp.X -> PCX (for outputs and figures only) ----
-axis_names <- paste0("PC", seq_len(dims_used))
-colnames(cor_mat) <- axis_names
-
-# ------------------------------------------------------------------------------
-# Outputs: tables
-# ------------------------------------------------------------------------------
-
-# ---- Wide table (traits x axes) ----
-cor_wide <- as.data.frame(cor_mat)
-cor_wide$trait <- rownames(cor_wide)
-cor_wide <- cor_wide[, c("trait", colnames(cor_mat)), drop = FALSE]
-rownames(cor_wide) <- NULL
-
-# ---- Long table (trait, axis, correlation) ----
-cor_long <- data.frame(
-  trait = rep(rownames(cor_mat), times = ncol(cor_mat)),
-  axis  = rep(colnames(cor_mat), each  = nrow(cor_mat)),
-  corr  = as.vector(cor_mat),
-  row.names = NULL
+cor_matrix <- cor(
+  pca_trait$traits_scaled,
+  as.matrix(pca_trait$traits_scores),
+  method = "pearson",
+  use    = "pairwise.complete.obs"
 )
 
-# ---- Order traits by their correlation on PC1 ----
-trait_order <- cor_long[cor_long$axis == "PC1", c("trait", "corr")]
-trait_order <- trait_order[order(trait_order$corr, decreasing = FALSE), "trait"]
-cor_long$trait <- factor(cor_long$trait, levels = trait_order)
+cor_long <- cor_matrix %>%
+  as.data.frame() %>%
+  rownames_to_column("trait") %>%
+  pivot_longer(-trait, names_to = "PC", values_to = "r") %>%
+  mutate(
+    trait_label = factor(trait_labels[trait], levels = rev(trait_labels)),
+    PC = factor(PC, levels = paste0("Comp.", 1:4), labels = paste0("PC", 1:4))
+  )
 
-# ---- Keep the axis order stable ----
-cor_long$axis <- factor(cor_long$axis, levels = axis_names)
+# --- Figure S2 ----------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Figure S4: heatmap of the correlations
-# ------------------------------------------------------------------------------
+s2_scale <- 842 / 576
 
-p_heat <- ggplot(cor_long, aes(x = axis, y = trait, fill = corr)) +
-  geom_tile(color = "white", linewidth = 0.4) +
-  geom_text(aes(label = sprintf("%.2f", corr)), size = 3.2, color = "black") +
+p_heatmap <- ggplot(cor_long, aes(x = PC, y = trait_label, fill = r)) +
+  geom_tile(colour = "white", linewidth = 0.5 * s2_scale) +
+  geom_text(
+    aes(label = sprintf("%.2f", r), colour = abs(r) > 0.4),
+    size = 3.2 * s2_scale, vjust = 0.3, family = fig_font
+  ) +
+  scale_colour_manual(values = c("TRUE" = "white", "FALSE" = "grey25"), guide = "none") +
   scale_fill_gradient2(
-    low = "#2B6CB0", mid = "white", high = "#C53030",
-    midpoint = 0,
-    limits = c(-1, 1),
-    oob = scales::squish,
-    name = "Correlation"
+    low = "#2166AC", mid = "white", high = "#B2182B",
+    midpoint = 0, limits = c(-1, 1), name = "Pearson r"
   ) +
-  labs(
-    x = NULL,
-    y = NULL
-  ) +
-  theme_minimal(base_size = 12) +
+  scale_x_discrete(position = "top") +
+  labs(x = NULL, y = NULL) +
+  theme_minimal(base_size = 11 * s2_scale, base_family = fig_font) +
   theme(
-    panel.grid = element_blank(),
-    axis.text.x = element_text(size = 11),
-    axis.text.y = element_text(size = 11),
-    legend.position = "right"
+    axis.text.x     = element_text(face = "bold", size = 12 * s2_scale),
+    axis.text.y     = element_text(size = 10 * s2_scale),
+    panel.grid      = element_blank(),
+    legend.position = "none"
   )
 
-# ------------------------------------------------------------------------------
-# Export
-# ------------------------------------------------------------------------------
+# --- Save ---------------------------------------------------------------------
 
-out_dir <- "figures/Clean/"
-if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+fig_save("figures/figS2", width = 842, height = 421,
+         draw = function() fig_plot(p_heatmap, 0, 0, 842, 421))
 
-ggsave(
-  filename = file.path(out_dir, "figS4_clean.pdf"),
-  plot = p_heat,
-  width = 7.8, height = 5.6, units = "in",
-  dpi = 300
-)
+# --- Session ------------------------------------------------------------------
 
-print(p_heat)
-
-# ------------------------------------------------------------------------------
-# Figure S4b: PCA correlation circle (PC1-PC2)
-# ------------------------------------------------------------------------------
-
-cor12 <- as.data.frame(cor_mat[, c("PC1", "PC2"), drop = FALSE])
-cor12$trait <- rownames(cor12)
-rownames(cor12) <- NULL
-
-# ---- rho: distance to the origin, i.e. how well the trait is represented ----
-cor12$rho <- sqrt(cor12$PC1^2 + cor12$PC2^2)
-cor12 <- cor12[order(cor12$rho, decreasing = TRUE), ]
-
-# ---- Unit circle: an arrow reaching it is perfectly correlated with the plane ----
-theta <- seq(0, 2 * pi, length.out = 400)
-circle_df <- data.frame(x = cos(theta), y = sin(theta))
-
-p_circle <- ggplot() +
-  geom_path(
-    data = circle_df,
-    aes(x = x, y = y),
-    linewidth = 0.6,
-    color = "grey40"
-  ) +
-  geom_hline(yintercept = 0, color = "grey80", linewidth = 0.5) +
-  geom_vline(xintercept = 0, color = "grey80", linewidth = 0.5) +
-  geom_segment(
-    data = cor12,
-    aes(x = 0, y = 0, xend = PC1, yend = PC2),
-    arrow = arrow(length = unit(0.18, "cm")),
-    linewidth = 0.7,
-    color = "black"
-  ) +
-  ggrepel::geom_text_repel(
-    data = cor12,
-    aes(x = PC1, y = PC2, label = trait),
-    size = 3.4,
-    min.segment.length = 0,
-    box.padding = 0.35,
-    point.padding = 0.2,
-    seed = 123
-  ) +
-  coord_equal(xlim = c(-1, 1), ylim = c(-1, 1)) +
-  labs(
-    x = "PC1 (correlation)",
-    y = "PC2 (correlation)"
-  ) +
-  theme_minimal(base_size = 12) +
-  theme(
-    panel.grid = element_blank()
-  )
-
-ggsave(
-  filename = file.path(out_dir, "figS4b_pca_circle_PC1_PC2_clean.png"),
-  plot = p_circle,
-  width = 6.5, height = 6.5, units = "in",
-  dpi = 300
-)
-
-print(p_circle)
-
-# ------------------------------------------------------------------------------
-# Save
-# ------------------------------------------------------------------------------
-
-# sessionInfo()
+sessionInfo()
