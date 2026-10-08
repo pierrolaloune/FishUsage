@@ -83,6 +83,18 @@ stored in `dataPrepared/` and `output/` and reloaded instead.
 
 Figures are written to `figures/` at their print size.
 
+## Contributing
+
+Problems, questions on the data and proposed changes are handled through the
+issues and pull requests of this GitHub repository; see
+[CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+## License
+
+Code and data are distributed under the
+[Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/)
+licence. Third-party data keep the terms of their sources.
+
 ## Contact
 
 Pierre Bouchet, CRBE, Université de Toulouse, France
