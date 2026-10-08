@@ -79,9 +79,6 @@ If you use this code or data, please cite the paper and the Zenodo archive:
   <https://doi.org/10.1038/s41467-026-78568-9>
 - Zenodo archive: <https://doi.org/10.5281/zenodo.21873314>
 
-## Conduct
-
-Keep discussions courteous, factual and focused on the work.
 
 ## Contact
 
