@@ -93,7 +93,8 @@ issues and pull requests of this GitHub repository; see
 
 Code and data are distributed under the
 [Creative Commons Attribution-NonCommercial 4.0 International](https://creativecommons.org/licenses/by-nc/4.0/)
-licence. Third-party data keep the terms of their sources.
+licence (see [LICENSE](LICENSE)). Third-party data keep the terms of their
+sources.
 
 ## Contact
 
