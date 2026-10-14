@@ -1,7 +1,6 @@
 # FishUsage
 
 [![Paper](https://img.shields.io/badge/Nature%20Communications-10.1038%2Fs41467--026--78568--9-blue)](https://doi.org/10.1038/s41467-026-78568-9)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21873314.svg)](https://doi.org/10.5281/zenodo.21873314)
 
 Data and code for the paper:
 
