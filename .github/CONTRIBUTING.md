@@ -75,7 +75,7 @@ that your contribution is distributed under the licence of the repository.
 
 If you use this code or data, please cite the paper and the Zenodo archive:
 
-- Bouchet, P., Brosse, S. & Toussaint, A. *Nature Communications* (2026).
+- Bouchet, P., Brosse, S. & Toussaint, A. Human targeting of morphologically unique fishes amplifies the risk of functional erosion. Nature Communications (2026).
   <https://doi.org/10.1038/s41467-026-78568-9>
 - Zenodo archive: <https://doi.org/10.5281/zenodo.21873314>
 
