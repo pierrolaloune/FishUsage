@@ -51,7 +51,7 @@ FishUsage/
 
 ## Data
 
-All analyses were based on publicly available datasets: species conservation status from the IUCN Red List (https://www.iucnredlist.org), phylogenetic data from Rabosky et al. (2018) (https://doi.org/10.5061/dryad.fc71cp4), human uses from FishBase (https://www.fishbase.org) and morphological traits from the FishMORPH database (Brosse et al. 2021; https://doi.org/10.6084/m9.figshare.14891412). Each of these datasets can be accessed directly from the original providers under their respective licences and terms of use. The full datasets required to reproduce these analyses are freely available in the Data folder of the associated GitHub repository ([FishUsage]<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo ([Zenodo]<https://doi.org/10.5281/zenodo.21873314>).
+All analyses were based on publicly available datasets: species conservation status from the IUCN Red List (https://www.iucnredlist.org), phylogenetic data from Rabosky et al. (2018) (https://doi.org/10.5061/dryad.fc71cp4), human uses from FishBase (https://www.fishbase.org) and morphological traits from the FishMORPH database (Brosse et al. 2021; https://doi.org/10.6084/m9.figshare.14891412). Each of these datasets can be accessed directly from the original providers under their respective licences and terms of use. The full datasets required to reproduce these analyses are freely available in the Data folder of the associated GitHub repository (<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo (<https://doi.org/10.5281/zenodo.21873314>).
 
 | Dataset              | Source                                                                                                                                                                                                                  |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,7 +63,7 @@ All analyses were based on publicly available datasets: species conservation sta
 
 ## Code 
 
-All R scripts used for data processing, statistical analysis, and generation of the figures in this study are available in the GitHub repository ([FishUsage]<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo ([Zenodo]<https://doi.org/10.5281/zenodo.21873314>).
+All R scripts used for data processing, statistical analysis, and generation of the figures in this study are available in the GitHub repository (<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo (<https://doi.org/10.5281/zenodo.21873314>).
 
 ## System requirements
 
