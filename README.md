@@ -83,12 +83,6 @@ stored in `dataPrepared/` and `output/` and reloaded instead.
 
 Figures are written to `figures/` at their print size.
 
-## Contributing
-
-Problems, questions on the data and proposed changes are handled through the
-issues and pull requests of this GitHub repository; see
-[CONTRIBUTING.md](.github/CONTRIBUTING.md).
-
 ## License
 
 Code and data are distributed under the
