@@ -1,7 +1,6 @@
 # FishUsage
 
 [![Paper](https://img.shields.io/badge/Nature%20Communications-10.1038%2Fs41467--026--78568--9-blue)](https://doi.org/10.1038/s41467-026-78568-9)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21873314.svg)](https://doi.org/10.5281/zenodo.21873314)
 
 Data and code for the paper:
 
@@ -51,10 +50,7 @@ FishUsage/
 
 ## Data
 
-All data needed to reproduce the analyses and figures are included in
-`dataPrepared/` (traits, phylogeny, IUCN categories, human uses, phylogenetic
-PCoA) and `output/` (precomputed results). They are also archived on Zenodo
-([10.5281/zenodo.21873314](https://doi.org/10.5281/zenodo.21873314)).
+All analyses were based on publicly available datasets: species conservation status from the IUCN Red List (https://www.iucnredlist.org), phylogenetic data from Rabosky et al. (2018) (https://doi.org/10.5061/dryad.fc71cp4), human uses from FishBase (https://www.fishbase.org) and morphological traits from the FishMORPH database (Brosse et al. 2021; https://doi.org/10.6084/m9.figshare.14891412). Each of these datasets can be accessed directly from the original providers under their respective licences and terms of use. The full datasets required to reproduce these analyses are freely available in the Data folder of the associated GitHub repository (<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo (<https://doi.org/10.5281/zenodo.21873314>).
 
 | Dataset              | Source                                                                                                                                                                                                                  |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -63,6 +59,10 @@ PCoA) and `output/` (precomputed results). They are also archived on Zenodo
 | Human uses           | Froese, R. & Pauly, D. FishBase (2025), via [`rfishbase`](https://docs.ropensci.org/rfishbase/) and the species summary pages of [fishbase.org](https://www.fishbase.org/)                                                |
 | Conservation status  | IUCN Red List of Threatened Species, 2024 ([iucnredlist.org](https://www.iucnredlist.org/))                                                                                                                             |
 | Fish silhouettes     | [PhyloPic](https://www.phylopic.org/), public domain / CC0 (credits in `output/phylopic_credits.csv`)                                                                                                                    |
+
+## Code 
+
+All R scripts used for data processing, statistical analysis, and generation of the figures in this study are available in the GitHub repository (<https://github.com/pierrolaloune/FishUsage>) and archived on Zenodo (<https://doi.org/10.5281/zenodo.21873314>).
 
 ## System requirements
 
